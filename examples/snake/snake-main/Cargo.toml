@@ -9,3 +9,10 @@ edition = "2021"
 libccanvas = { path = "../../../" }
 tokio = { version = "1", features = [ "macros", "time" ]}
 rand = "0.8"
+
+# size optimisations, does not degrade performance
+[profile.release]
+strip = true
+lto = true
+opt-level = 3
+panic = "abort"

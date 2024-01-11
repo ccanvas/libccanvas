@@ -67,6 +67,10 @@ impl Subscription {
     pub fn specific_message(source: Discriminator) -> Self {
         Self::SpecificMessage { source }
     }
+    
+    pub fn with_priority(self, priority: u32) -> (Self, Option<u32>) {
+        (self, Some(priority))
+    }
 }
 
 impl Into<(Self, Option<u32>)> for Subscription {

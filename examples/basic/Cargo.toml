@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 libccanvas = { path = "../../" }
 tokio = { version = "1", features = [ "macros" ]}
+
+# size optimisations, does not degrade performance
+[profile.release]
+strip = true
+lto = true
+opt-level = 3
+panic = "abort"

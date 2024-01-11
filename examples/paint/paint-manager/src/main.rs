@@ -3,12 +3,12 @@ use libccanvas::{
         Colour, Discriminator, EventVariant, KeyCode, ResponseContent, ResponseSuccess,
         Subscription,
     },
-    client::Client,
+    client::{Client, ClientConfig},
 };
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::default();
+    let mut client = Client::new(ClientConfig::default()).await;
 
     client.hidecursor();
 

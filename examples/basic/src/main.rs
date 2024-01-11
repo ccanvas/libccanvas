@@ -3,7 +3,7 @@ use libccanvas::{bindings::*, client::*};
 #[tokio::main]
 async fn main() {
     // creates the client using the default configuration
-    let client = Client::default();
+    let client = Client::new(ClientConfig::default()).await;
 
     // subscribe to all key presses
     // now client.recv() will include key press events

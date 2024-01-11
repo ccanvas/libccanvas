@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use nu_json::Value;
 use serde::Serialize;
 
 use crate::{bindings::Discriminator, client::Client};
@@ -33,7 +34,7 @@ impl Request {
     }
 }
 
-#[derive(Serialize, Clone, PartialEq, Eq, Debug)]
+#[derive(Serialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
 /// the real content of the request sent to server
 pub enum RequestContent {
@@ -60,18 +61,24 @@ pub enum RequestContent {
         channel: Subscription,
         component: Option<Discriminator>,
     },
-
     #[serde(rename = "set socket")]
     /// sent responses to this socket
-    SetSocket { path: PathBuf },
+    SetSocket {
+        path: PathBuf,
+    },
 
     #[serde(rename = "drop")]
     /// remove a single component
-    Drop { discrim: Option<Discriminator> },
+    Drop {
+        discrim: Option<Discriminator>,
+    },
 
     #[serde(rename = "render")]
     /// render something to the terminal
-    Render { content: RenderRequest, flush: bool },
+    Render {
+        content: RenderRequest,
+        flush: bool,
+    },
 
     #[serde(rename = "spawn")]
     /// spawn a new process
@@ -93,11 +100,51 @@ pub enum RequestContent {
 
     /// create a new space at a space
     #[serde(rename = "new space")]
-    NewSpace { label: String },
+    NewSpace {
+        label: String,
+    },
 
     /// focus a specific space
     #[serde(rename = "focus at")]
     FocusAt,
+
+    /// get a state value
+    #[serde(rename = "get state")]
+    GetState {
+        label: StateValue,
+    },
+
+    /// get value of an entry
+    #[serde(rename = "get entry")]
+    GetEntry {
+        label: String,
+    },
+    
+    /// remove an entry
+    #[serde(rename = "remove entry")]
+    RemoveEntry {
+        label: String,
+    },
+
+    /// get value of an entry
+    #[serde(rename = "set entry")]
+    SetEntry {
+        label: String,
+        value: Value,
+    },
+
+    /// watch a certain value in pool
+    #[serde(rename = "watch")]
+    Watch {
+        label: String,
+    },
+
+    /// watch a certain value in pool
+    #[serde(rename = "unwatch")]
+    Unwatch {
+        label: String,
+        watcher: Discriminator,
+    },
 }
 
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
@@ -128,6 +175,8 @@ pub enum RenderRequest {
     /// unhide cursor
     #[serde(rename = "show cursor")]
     ShowCursor,
+    #[serde(rename = "clear all")]
+    ClearAll,
 
     /// render multiple items at the same time - guaranteed to be rendered at the same time, and
     /// socket performance is significantly better than sending individual requests.
@@ -213,4 +262,17 @@ pub enum Colour {
     Ansi { value: u8 },
     #[serde(rename = "rgb")]
     Rgb { red: u8, green: u8, blue: u8 },
+}
+
+/// variations of requests
+#[derive(Serialize, Clone, PartialEq, Eq, Debug)]
+pub enum StateValue {
+    #[serde(rename = "focused")]
+    Focused,
+    #[serde(rename = "is focused")]
+    IsFocused,
+    #[serde(rename = "term size")]
+    TermSize,
+    #[serde(rename = "working dir")]
+    WorkingDir,
 }

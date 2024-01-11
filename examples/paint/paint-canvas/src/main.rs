@@ -1,12 +1,12 @@
 use ccanvas_paint_canvas::*;
 use libccanvas::{
     bindings::{EventVariant, KeyCode, KeyEvent, KeyModifier, MouseType, Subscription},
-    client::Client,
+    client::{Client, ClientConfig},
 };
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::default();
+    let mut client = Client::new(ClientConfig::default()).await;
 
     // subscribe to these events
     client

@@ -1,9 +1,10 @@
 //! basically copied from the main repo of /ccanvas
+use nu_json::Value;
 use serde::{Deserialize, Serialize};
 
 use crate::bindings::Discriminator;
 
-#[derive(Deserialize, Clone, PartialEq, Debug, Hash)]
+#[derive(Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
 pub enum EventVariant {
     /// keyboard event
@@ -26,6 +27,17 @@ pub enum EventVariant {
     Focused,
     #[serde(rename = "unfocused")]
     Unfocused,
+    #[serde(rename = "value updated")]
+    ValueUpdated {
+        label: String,
+        new: Value,
+        discrim: Discriminator,
+    },
+    #[serde(rename = "value removed")]
+    ValueRemoved {
+        label: String,
+        discrim: Discriminator,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Hash)]

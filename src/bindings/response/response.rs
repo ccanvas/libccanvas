@@ -1,3 +1,4 @@
+use nu_json::Value;
 use serde::Deserialize;
 
 use crate::bindings::Discriminator;
@@ -41,6 +42,8 @@ pub enum ResponseError {
     ComponentNotFound,
     #[serde(rename = "spawn failed")]
     SpawnFailed,
+    #[serde(rename = "entry not found")]
+    EntryNotFound,
 }
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
@@ -53,7 +56,7 @@ pub enum ResponseSuccess {
     SubscribeRemoved,
 
     #[serde(rename = "listener set")]
-    ListenerSet,
+    ListenerSet { discrim: Discriminator },
 
     #[serde(rename = "dropped")]
     Dropped,
@@ -72,4 +75,19 @@ pub enum ResponseSuccess {
 
     #[serde(rename = "focus changed")]
     FocusChanged,
+
+    #[serde(rename = "value")]
+    Value { value: Value },
+
+    #[serde(rename = "value set")]
+    ValueSet,
+
+    #[serde(rename = "removed value")]
+    RemovedValue,
+
+    #[serde(rename = "watching")]
+    Watching,
+
+    #[serde(rename = "unwatched")]
+    Unwatched,
 }

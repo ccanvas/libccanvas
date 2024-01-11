@@ -1,11 +1,11 @@
 use libccanvas::{
     bindings::{EventVariant, KeyCode, Subscription},
-    client::Client,
+    client::{Client, ClientConfig},
 };
 
 #[tokio::main]
 async fn main() {
-    let client = Client::default();
+    let client = Client::new(ClientConfig::default()).await;
     // spawns in the 2 processes
     client
         .spawn(

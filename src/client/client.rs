@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use nu_json::Value;
 use tokio::{
     sync::{
         mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -16,7 +17,7 @@ use tokio::{
 
 use crate::bindings::{
     Colour, CursorStyle, Discriminator, Event, RenderRequest, Request, RequestContent, Response,
-    ResponseContent, ResponseSuccess, Subscription,
+    ResponseContent, ResponseSuccess, Subscription, StateValue,
 };
 
 use super::ClientConfig;
@@ -30,6 +31,9 @@ pub struct Client {
     inbound_recv: Arc<Mutex<UnboundedReceiver<Event>>>,
     /// request to ccanvas
     outbound_send: UnboundedSender<Request>,
+    
+    /// self discrim
+    discrim: Discriminator,
 
     /// path to request socket
     request_socket: PathBuf,
@@ -39,16 +43,13 @@ pub struct Client {
     req_confirms: Arc<Mutex<HashMap<u32, oneshot::Sender<ResponseContent>>>>,
 }
 
-impl Default for Client {
-    fn default() -> Self {
-        Self::new(ClientConfig::default())
-    }
-}
-
 static mut REQID: OnceCell<u32> = OnceCell::const_new_with(0);
 
 impl Client {
-    pub fn new(config: ClientConfig) -> Self {
+    pub async fn new(config: ClientConfig) -> Self {
+        if !config.request_socket.exists() {
+            panic!("request socket not found, a component is not to be executed outside context of a canvas");
+        }
         // creates the listener socket
         let listener = UnixListener::bind(&config.listener_socket).unwrap();
 
@@ -64,9 +65,12 @@ impl Client {
                 path: config.listener_socket,
             },
         );
+
+        let (set_socket_sender, set_socket_res) = oneshot::channel();
+        req_confirms.lock().await.insert(set_socket.id(), set_socket_sender);
         UnixStream::connect(&config.request_socket)
             .unwrap()
-            .write_all(serde_json::to_vec(&set_socket).unwrap().as_slice())
+            .write_all(nu_json::to_vec(&set_socket).unwrap().as_slice())
             .unwrap();
 
         let listener_handle = {
@@ -86,7 +90,7 @@ impl Client {
                         Err(_) => continue,
                     }
 
-                    let res: Response = match serde_json::from_str(&msg) {
+                    let res: Response = match nu_json::from_str(&msg) {
                         Ok(res) => res,
                         Err(_) => continue,
                     };
@@ -110,7 +114,7 @@ impl Client {
                                 .block_on(req_confirms.lock())
                                 .remove(&res.request.unwrap())
                             {
-                                entry.send(res.content).unwrap();
+                                let _ = entry.send(res.content);
                             }
                         }
                     }
@@ -127,11 +131,17 @@ impl Client {
                     tokio::task::spawn_blocking(move || {
                         UnixStream::connect(request_socket)
                             .unwrap()
-                            .write_all(serde_json::to_vec(&req).unwrap().as_slice())
+                            .write_all(nu_json::to_vec(&req).unwrap().as_slice())
                             .unwrap();
                     });
                 }
             })
+        };
+
+        let discrim = if let ResponseContent::Success { content: ResponseSuccess::ListenerSet { discrim } } = set_socket_res.await.unwrap() {
+            discrim
+        } else {
+            panic!("no")
         };
 
         Self {
@@ -142,6 +152,7 @@ impl Client {
             request_socket: config.request_socket,
             render_requests: Vec::new(),
             req_confirms,
+            discrim
         }
     }
 
@@ -245,6 +256,10 @@ impl Client {
         self.render_requests.push(RenderRequest::HideCursor)
     }
 
+    pub fn clear_all(&mut self) {
+        self.render_requests.push(RenderRequest::ClearAll)
+    }
+
     pub async fn renderall(&mut self) -> ResponseContent {
         if self.render_requests.is_empty() {
             return ResponseContent::Success {
@@ -332,6 +347,110 @@ impl Client {
         );
         self.send(req).await
     }
+
+    pub fn discrim(&self) -> &Discriminator {
+        &self.discrim
+    }
+
+    pub async fn is_focused(&self) -> bool {
+        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::IsFocused });
+        if let ResponseContent::Success { content: ResponseSuccess::Value { value: Value::Bool(b) } } = self.send(req).await {
+            b
+        } else {
+            // this isnt supposed to happen
+            false
+        }
+    }
+
+    pub async fn focused(&self) -> Discriminator {
+        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::IsFocused });
+        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = self.send(req).await {
+            nu_json::from_value(value).unwrap()
+        } else {
+            // this isnt supposed to happen
+            Discriminator::master()
+        }
+    }
+
+    pub async fn term_size(&self) -> (u32, u32) {
+        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::TermSize });
+        let res = self.send(req).await;
+        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = res {
+            #[derive(serde::Deserialize)]
+            struct TermSize {
+                x: u32,
+                y: u32
+            }
+
+            let termsize: TermSize = nu_json::from_value(value).unwrap();
+            (termsize.x, termsize.y)
+        } else {
+            // this isnt supposed to happen
+            (0, 0)
+        }
+    }
+
+    pub async fn current_directory(&self) -> PathBuf {
+        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::WorkingDir });
+        let res = self.send(req).await;
+        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = res {
+            nu_json::from_value(value).unwrap()
+        } else {
+            PathBuf::new()
+        }
+    }
+
+    pub async fn watch(&self, label: String, target: Discriminator) -> ResponseContent {
+        let req = Request::new(target, RequestContent::Watch { label });
+        self.send(req).await
+    }
+
+    pub async fn unwatch(&self, label: String, target: Discriminator) -> ResponseContent {
+        let req = Request::new(target, RequestContent::Unwatch { label, watcher: self.discrim.clone() });
+        self.send(req).await
+    }
+
+    pub async fn watch_self(&self, label: String) -> ResponseContent {
+        self.watch(label, self.discrim.clone()).await
+    }
+
+    pub async fn unwatch_self(&self, label: String) -> ResponseContent {
+        self.unwatch(label, self.discrim.clone()).await
+    }
+
+    pub async fn set(&self, label: String, target: Discriminator, value: Value) -> ResponseContent {
+        let req = Request::new(target, RequestContent::SetEntry { label, value });
+        self.send(req).await
+    }
+
+    pub async fn set_self(&self, label: String, value: Value) -> ResponseContent {
+        self.set(label, self.discrim.clone(), value).await
+    }
+
+    pub async fn get_raw(&self, label: String, target: Discriminator) -> ResponseContent {
+        let req = Request::new(target, RequestContent::GetEntry { label });
+        self.send(req).await
+    }
+
+    pub async fn get(&self, label: String, target: Discriminator) -> Option<Value> {
+        match self.get_raw(label, target).await {
+            ResponseContent::Success { content: ResponseSuccess::Value { value } } => Some(value),
+            _ => None
+        }
+    }
+
+    pub async fn get_self(&self, label: String) -> Option<Value> {
+        self.get(label, self.discrim.clone()).await
+    }
+
+    pub async fn remove(&self, label: String, target: Discriminator) -> ResponseContent {
+        let req = Request::new(target, RequestContent::RemoveEntry { label });
+        self.send(req).await
+    }
+
+    pub async fn remove_self(&self, label: String) -> ResponseContent {
+        self.remove(label, self.discrim.clone()).await
+    }
 }
 
 impl Drop for Client {
@@ -344,7 +463,7 @@ impl Drop for Client {
         );
         UnixStream::connect(self.request_socket.clone())
             .unwrap()
-            .write_all(serde_json::to_vec(&req).unwrap().as_slice())
+            .write_all(nu_json::to_vec(&req).unwrap().as_slice())
             .unwrap();
     }
 }

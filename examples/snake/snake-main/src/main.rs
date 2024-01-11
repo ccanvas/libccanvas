@@ -3,13 +3,13 @@ use std::time::Duration;
 use ccanvas_snake_main::{Direction, Snake};
 use libccanvas::{
     bindings::{EventVariant, KeyCode, Subscription},
-    client::Client,
+    client::{Client, ClientConfig},
 };
 use tokio::time::Instant;
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::default();
+    let mut client = Client::new(ClientConfig::default()).await;
     client
         .subscribe_multiple(vec![
             Subscription::specific_keycode(KeyCode::Up),

@@ -1,11 +1,11 @@
 use libccanvas::{
     bindings::{Colour, EventVariant, Subscription},
-    client::Client,
+    client::{Client, ClientConfig},
 };
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::default();
+    let mut client = Client::new(ClientConfig::default()).await;
     // listen to all messages - including broadcasts from snake-main
     client.subscribe(Subscription::AllMessages).await;
 
