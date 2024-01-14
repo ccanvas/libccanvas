@@ -1,11 +1,12 @@
-use nu_json::Value;
 use serde::Deserialize;
+use serde_json::Value;
 
 use crate::bindings::Discriminator;
 
 use super::EventVariant;
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
+/// A single response to send to the server.
 pub struct Response {
     /// the content of the response
     pub content: ResponseContent,
@@ -21,6 +22,7 @@ pub struct Response {
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
+/// Real content of the response.
 pub enum ResponseContent {
     #[serde(rename = "undelivered")]
     Undelivered,
@@ -37,6 +39,7 @@ pub enum ResponseContent {
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
+/// Error variant of responses.
 pub enum ResponseError {
     #[serde(rename = "component not found")]
     ComponentNotFound,
@@ -48,6 +51,7 @@ pub enum ResponseError {
 
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
+/// Success variant of responses
 pub enum ResponseSuccess {
     #[serde(rename = "subscribe added")]
     SubscribeAdded,

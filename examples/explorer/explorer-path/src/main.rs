@@ -27,22 +27,23 @@ async fn main() {
     );
 
     // currently exploring directory path
-    let mut path: PathBuf = nu_json::from_value(path.unwrap()).unwrap();
+    let mut path: PathBuf = serde_json::from_value(path.unwrap()).unwrap();
     // the dimensions this component should render in
-    let mut screen: Rect = nu_json::from_value(screen.unwrap()).unwrap();
+    let mut screen: Rect = serde_json::from_value(screen.unwrap()).unwrap();
 
     render(&mut client, screen, &path).await;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         match event.get() {
             // update the values - path and screen if an update is detected
             // and rerender
             EventVariant::ValueUpdated { label, new, .. } if label == "path" => {
-                path = nu_json::from_value(new.clone()).unwrap();
+                path = serde_json::from_value(new.clone()).unwrap();
                 render(&mut client, screen, &path).await
             }
             EventVariant::ValueUpdated { label, new, .. } if label == "path_screen" => {
-                screen = nu_json::from_value(new.clone()).unwrap();
+                screen = serde_json::from_value(new.clone()).unwrap();
                 render(&mut client, screen, &path).await
             }
             _ => {}

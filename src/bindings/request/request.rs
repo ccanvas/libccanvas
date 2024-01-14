@@ -1,25 +1,25 @@
 use std::path::PathBuf;
 
-use nu_json::Value;
 use serde::Serialize;
+use serde_json::Value;
 
 use crate::{bindings::Discriminator, client::Client};
 
 use super::Subscription;
 
 #[derive(Serialize, Debug, Clone)]
-/// request to send to the server
+/// A single request to send to the server.
 pub struct Request {
-    /// reciever
+    /// recipient
     target: Discriminator,
-    /// the content of the request
+    /// Content of the request
     pub content: RequestContent,
     /// confirmation identifier
     id: u32,
 }
 
 impl Request {
-    /// construct new self with a unique id
+    /// Construct new self with unique ID.
     pub fn new(target: Discriminator, content: RequestContent) -> Self {
         Self {
             target,
@@ -28,7 +28,7 @@ impl Request {
         }
     }
 
-    /// returns id of self
+    /// Returns ID of self.
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -36,19 +36,21 @@ impl Request {
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
-/// the real content of the request sent to server
+/// Real content of the request.
 pub enum RequestContent {
     #[serde(rename = "confirm recieve")]
-    /// confirm that an event has been recieved
+    /// Confirm that an event has been recieved.
     ConfirmRecieve {
-        /// event id
+        /// Event ID
         id: u32,
-        /// true = does not capture event
+        /// Whether to allow passing of the event or not.
+        /// - true = allow passing
+        /// - false = capture event
         pass: bool,
     },
 
     #[serde(rename = "subscribe")]
-    /// add subscription to a channel with priority
+    /// Add a subscription to a channel with priority.
     Subscribe {
         channel: Subscription,
         priority: Option<u32>,
@@ -56,32 +58,27 @@ pub enum RequestContent {
     },
 
     #[serde(rename = "Unsubscribe")]
-    /// remove subscription from a channel
+    /// Remove a subscription from a channel.
     Unsubscribe {
         channel: Subscription,
         component: Option<Discriminator>,
     },
     #[serde(rename = "set socket")]
-    /// sent responses to this socket
-    SetSocket {
-        path: PathBuf,
-    },
+    /// Hint server to use this socket for communication.
+    ///
+    /// This is ran when the client is created.
+    SetSocket { path: PathBuf },
 
     #[serde(rename = "drop")]
-    /// remove a single component
-    Drop {
-        discrim: Option<Discriminator>,
-    },
+    /// Remove a single component.
+    Drop { discrim: Option<Discriminator> },
 
     #[serde(rename = "render")]
-    /// render something to the terminal
-    Render {
-        content: RenderRequest,
-        flush: bool,
-    },
+    /// Render something to the terminal.
+    Render { content: RenderRequest, flush: bool },
 
     #[serde(rename = "spawn")]
-    /// spawn a new process
+    /// Spawns a new process.
     Spawn {
         command: String,
         args: Vec<String>,
@@ -89,57 +86,47 @@ pub enum RequestContent {
     },
 
     #[serde(rename = "message")]
-    /// send a message to another component
-    /// if target specifies a space,
-    /// all components under that space will recieve the message
+    /// Send a message to another component.
+    /// If target specifies a space,
+    /// all components under that space will recieve the message.
     Message {
         content: String,
         sender: Discriminator,
         target: Discriminator,
     },
 
-    /// create a new space at a space
+    /// Create a new space at a space.
     #[serde(rename = "new space")]
-    NewSpace {
-        label: String,
-    },
+    NewSpace { label: String },
 
-    /// focus a specific space
+    /// Set focus to a specific space.
     #[serde(rename = "focus at")]
     FocusAt,
 
-    /// get a state value
+    /// Get a state value.
+    ///
+    /// A state value is intrinsic to the state of the canvas, e.g. dimensions.
+    /// And cannot be modified programatically.
     #[serde(rename = "get state")]
-    GetState {
-        label: StateValue,
-    },
+    GetState { label: StateValue },
 
-    /// get value of an entry
+    /// Get value of an entry (variable).
     #[serde(rename = "get entry")]
-    GetEntry {
-        label: String,
-    },
-    
-    /// remove an entry
+    GetEntry { label: String },
+
+    /// Remove an entry (variable).
     #[serde(rename = "remove entry")]
-    RemoveEntry {
-        label: String,
-    },
+    RemoveEntry { label: String },
 
-    /// get value of an entry
+    /// Set value of an entry (variable). Creates the entry if it does not already exist.
     #[serde(rename = "set entry")]
-    SetEntry {
-        label: String,
-        value: Value,
-    },
+    SetEntry { label: String, value: Value },
 
-    /// watch a certain value in pool
+    /// Watch the value of an entry.
     #[serde(rename = "watch")]
-    Watch {
-        label: String,
-    },
+    Watch { label: String },
 
-    /// watch a certain value in pool
+    /// Unwatch the value of an entry.
     #[serde(rename = "unwatch")]
     Unwatch {
         label: String,
@@ -149,12 +136,12 @@ pub enum RequestContent {
 
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
 #[serde(tag = "type")]
-/// a render request to the server
+/// A render request to the server.
 pub enum RenderRequest {
-    /// change a single character
+    /// Change a single character
     #[serde(rename = "set char")]
     SetChar { x: u32, y: u32, c: char },
-    /// change a single character, coloured
+    /// Change a single character, coloured
     #[serde(rename = "set colouredchar")]
     SetCharColoured {
         x: u32,
@@ -163,46 +150,47 @@ pub enum RenderRequest {
         fg: Colour,
         bg: Colour,
     },
-    /// all the terminal to flush all changes, this is usually not needed
+    /// Flush all changes, this is usually not needed
     #[serde(rename = "flush")]
     Flush,
-    /// set cursor looks
+    /// Set cursor looks
     #[serde(rename = "set cursorstyle")]
     SetCursorStyle { style: CursorStyle },
-    /// hide cursor
+    /// Hide cursor
     #[serde(rename = "hide cursor")]
     HideCursor,
-    /// unhide cursor
+    /// Unhide cursor
     #[serde(rename = "show cursor")]
     ShowCursor,
+    /// Clear terminal content
     #[serde(rename = "clear all")]
     ClearAll,
 
-    /// render multiple items at the same time - guaranteed to be rendered at the same time, and
+    /// Render multiple items at the same time - guaranteed to be rendered at the same time, and
     /// socket performance is significantly better than sending individual requests.
     #[serde(rename = "render multiple")]
     RenderMultiple { tasks: Vec<Self> },
 }
 
 impl RenderRequest {
-    /// create a setchar request
+    /// Create a setchar request
     pub fn setchar(x: u32, y: u32, c: char) -> Self {
         Self::SetChar { x, y, c }
     }
 
-    /// create a setchar coloured request
+    /// Create a setchar coloured request
     pub fn setchar_coloured(x: u32, y: u32, c: char, fg: Colour, bg: Colour) -> Self {
         Self::SetCharColoured { x, y, c, fg, bg }
     }
 
-    /// create a setcursor request
+    /// Create a setcursor request
     pub fn setcursor(style: CursorStyle) -> Self {
         Self::SetCursorStyle { style }
     }
 }
 
 #[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
-/// how the cursor should look
+/// A cursor style.
 pub enum CursorStyle {
     #[serde(rename = "blinking bar")]
     BlinkingBar,
@@ -220,7 +208,7 @@ pub enum CursorStyle {
 
 #[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(tag = "type")]
-/// generic colours
+/// Terminal colours.
 pub enum Colour {
     #[serde(rename = "black")]
     Black,
@@ -264,7 +252,7 @@ pub enum Colour {
     Rgb { red: u8, green: u8, blue: u8 },
 }
 
-/// variations of requests
+/// Intrinsic state values
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
 pub enum StateValue {
     #[serde(rename = "focused")]

@@ -4,44 +4,44 @@ use crate::bindings::{Discriminator, KeyCode, KeyEvent, KeyModifier, MouseType};
 
 #[derive(Hash, PartialEq, Eq, Serialize, Debug, Clone)]
 #[serde(tag = "type")]
-/// a single subscription request
+/// A single subscription channel.
 pub enum Subscription {
-    /// subscribes to all key press events
+    /// All key press events
     #[serde(rename = "all key presses")]
     AllKeyPresses,
-    /// all mouse click and drag events
+    /// All mouse click and drag events
     #[serde(rename = "all mouse events")]
     AllMouseEvents,
-    /// subscribe to all messages from other components
+    /// All messages from other components
     #[serde(rename = "all messages")]
     AllMessages,
-    /// a specific key event
+    /// A specific key event
     #[serde(rename = "specific key press")]
     SpecificKeyPress { key: KeyEvent },
-    /// all key events with that key modifier
+    /// All key events with that key modifier
     #[serde(rename = "specific key modifier")]
     SpecificKeyModifier { modifier: KeyModifier },
-    /// all key events with that key modifier
+    /// All key events with that key code
     #[serde(rename = "specific key code")]
     SpecificKeyCode { code: KeyCode },
-    /// a specific mouse event
+    /// A specific mouse event
     #[serde(rename = "specific mouse event")]
     SpecificMouseEvent { mouse: MouseType },
-    /// a specific message from someone
+    /// A message from a specific component
     #[serde(rename = "specific message")]
     SpecificMessage { source: Discriminator },
-    /// screen resize events
+    /// Screen resize events
     #[serde(rename = "screen resize")]
     ScreenResize,
     #[serde(rename = "focused")]
-    /// current space focused
+    /// Current space focused
     Focused,
     #[serde(rename = "unfocused")]
-    /// current space unfocused
+    /// Current space unfocused
     Unfocused,
 
     #[serde(rename = "multiple")]
-    /// subscribe to multiple channels at once
+    /// Subscribe to multiple channels at once
     Multiple {
         subs: Vec<(Subscription, Option<u32>)>,
     },
@@ -67,14 +67,14 @@ impl Subscription {
     pub fn specific_message(source: Discriminator) -> Self {
         Self::SpecificMessage { source }
     }
-    
+
     pub fn with_priority(self, priority: u32) -> (Self, Option<u32>) {
         (self, Some(priority))
     }
 }
 
-impl Into<(Self, Option<u32>)> for Subscription {
-    fn into(self) -> (Self, Option<u32>) {
-        (self, None)
+impl From<Subscription> for (Subscription, Option<u32>) {
+    fn from(value: Subscription) -> Self {
+        (value, None)
     }
 }

@@ -4,7 +4,7 @@ use crate::bindings::{Discriminator, Request, RequestContent};
 
 use super::EventVariant;
 
-/// an event binding struct, sends a confirm request when dropped
+/// An event binding struct that sends a confirmation to the ccanvas server.
 pub struct Event {
     /// real content of the event
     content: EventVariant,
@@ -20,8 +20,10 @@ impl Event {
         }
     }
 
-    /// mark the event as done and release the event
-    /// pass = false will capture the event and no lower components can recieve it
+    /// Marks the event as done and releases the event.
+    ///
+    /// - `true` allows other components to also recieve the event.
+    /// - `false` captures the event.
     pub fn done(&mut self, pass: bool) {
         if let Some((id, sender)) = std::mem::take(&mut self.confirm) {
             sender
@@ -33,17 +35,18 @@ impl Event {
         }
     }
 
-    /// returns a reference to the content
+    /// Returns a reference to the content of the event.
     pub fn get(&self) -> &EventVariant {
         &self.content
     }
 
-    /// returns a mutable reference to the content
+    /// Returns a mutable reference to the content of the event.
     pub fn get_mut(&mut self) -> &mut EventVariant {
         &mut self.content
     }
 }
 
+/// Alias to `event.done(true)`.
 impl Drop for Event {
     fn drop(&mut self) {
         self.done(true)

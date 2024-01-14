@@ -49,7 +49,7 @@ async fn main() {
         tokio::select! {
             // if there are no inputs until the next tick, then great
             _ = tokio::time::sleep_until(next_tick) => {},
-            Some(event) = client.recv() => {
+            event = client.recv() => {
                 // otherwise, do something with the event
                 if let EventVariant::Key(key) = event.get() {
                     match key.code {

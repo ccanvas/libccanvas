@@ -62,7 +62,8 @@ async fn main() {
     render_workspaces(focused, &mut client);
     client.renderall().await;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         if let EventVariant::Key(key) = event.get() {
             match key.code {
                 KeyCode::Char('q') => {

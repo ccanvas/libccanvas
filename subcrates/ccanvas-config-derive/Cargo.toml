@@ -1,0 +1,23 @@
+[package]
+name = "ccanvas-config-derive"
+version = "0.1.0"
+authors = [ "siriusmart" ]
+edition = "2021"
+description = "Macro implementation of #[derive(CcanvasConfig)]"
+license = "AGPL-3.0"
+repository = "https://github.com/ccanvas/libccanvas"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"
+syn = { version = "2", default-features = false, features = ["derive", "proc-macro", "parsing"]}
+
+[profile.release]
+strip = true
+lto = true
+opt-level = 3
+panic = "abort"

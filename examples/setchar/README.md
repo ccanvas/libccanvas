@@ -12,7 +12,7 @@ This component shows how characters at a specific position on the canvas can be 
 
 ## How to run this component
 
-- [`ccanvas`](https://github.com/siriusmart/ccanvas) installed in system.
+- [`ccanvas`](https://github.com/ccanvas/ccanvas) installed in system.
 - Install the component using `cargo install --path .`
 
 Start the canvas using the command below.

@@ -16,23 +16,24 @@ async fn main() {
     let mut client = Client::new(ClientConfig::default()).await;
     
     // path of currently previewing path
-    let mut selected: Option<PathBuf> = nu_json::from_value(client.get("selected".to_string(), Discriminator::master()).await.unwrap()).unwrap();
+    let mut selected: Option<PathBuf> = serde_json::from_value(client.get("selected".to_string(), Discriminator::master()).await.unwrap()).unwrap();
     // place to render to
-    let mut screen: Rect = nu_json::from_value(client.get("file_screen".to_string(), Discriminator::master()).await.unwrap()).unwrap();
+    let mut screen: Rect = serde_json::from_value(client.get("file_screen".to_string(), Discriminator::master()).await.unwrap()).unwrap();
 
     client.watch("selected".to_string(), Discriminator::master()).await;
     client.watch("file_screen".to_string(), Discriminator::master()).await;
     render(&mut client, &selected, screen).await;
 
     // no explainations needed
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         match event.get() {
             EventVariant::ValueUpdated { label, new, .. } if label == "selected" => {
-                selected = nu_json::from_value(new.clone()).unwrap();
+                selected = serde_json::from_value(new.clone()).unwrap();
                 render(&mut client, &selected, screen).await;
             }
             EventVariant::ValueUpdated { label, new, .. } if label == "file_screen" => {
-                screen = nu_json::from_value(new.clone()).unwrap();
+                screen = serde_json::from_value(new.clone()).unwrap();
                 render(&mut client, &selected, screen).await;
             }
             _ => {}

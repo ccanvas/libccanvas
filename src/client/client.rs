@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use nu_json::Value;
+use serde_json::Value;
 use tokio::{
     sync::{
         mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -17,11 +17,12 @@ use tokio::{
 
 use crate::bindings::{
     Colour, CursorStyle, Discriminator, Event, RenderRequest, Request, RequestContent, Response,
-    ResponseContent, ResponseSuccess, Subscription, StateValue,
+    ResponseContent, ResponseSuccess, StateValue, Subscription,
 };
 
 use super::ClientConfig;
 
+/// Handles all interactions between the ccanvas server and your code.
 pub struct Client {
     /// task handle to the listener loop
     listener_handle: JoinHandle<()>,
@@ -31,21 +32,22 @@ pub struct Client {
     inbound_recv: Arc<Mutex<UnboundedReceiver<Event>>>,
     /// request to ccanvas
     outbound_send: UnboundedSender<Request>,
-    
+
     /// self discrim
     discrim: Discriminator,
 
     /// path to request socket
     request_socket: PathBuf,
     /// unflushed render requests
-    render_requests: Vec<RenderRequest>,
+    render_requests: std::sync::Mutex<Vec<RenderRequest>>,
     /// confirmation handles for requests
     req_confirms: Arc<Mutex<HashMap<u32, oneshot::Sender<ResponseContent>>>>,
 }
 
-static mut REQID: OnceCell<u32> = OnceCell::const_new_with(0);
+static REQID: OnceCell<std::sync::Mutex<u32>> = OnceCell::const_new_with(std::sync::Mutex::new(0));
 
 impl Client {
+    /// Create a new instance of self, will panic if connection fails.
     pub async fn new(config: ClientConfig) -> Self {
         if !config.request_socket.exists() {
             panic!("request socket not found, a component is not to be executed outside context of a canvas");
@@ -67,10 +69,13 @@ impl Client {
         );
 
         let (set_socket_sender, set_socket_res) = oneshot::channel();
-        req_confirms.lock().await.insert(set_socket.id(), set_socket_sender);
+        req_confirms
+            .lock()
+            .await
+            .insert(set_socket.id(), set_socket_sender);
         UnixStream::connect(&config.request_socket)
             .unwrap()
-            .write_all(nu_json::to_vec(&set_socket).unwrap().as_slice())
+            .write_all(serde_json::to_vec(&set_socket).unwrap().as_slice())
             .unwrap();
 
         let listener_handle = {
@@ -90,7 +95,7 @@ impl Client {
                         Err(_) => continue,
                     }
 
-                    let res: Response = match nu_json::from_str(&msg) {
+                    let res: Response = match serde_json::from_str(&msg) {
                         Ok(res) => res,
                         Err(_) => continue,
                     };
@@ -131,14 +136,17 @@ impl Client {
                     tokio::task::spawn_blocking(move || {
                         UnixStream::connect(request_socket)
                             .unwrap()
-                            .write_all(nu_json::to_vec(&req).unwrap().as_slice())
+                            .write_all(serde_json::to_vec(&req).unwrap().as_slice())
                             .unwrap();
                     });
                 }
             })
         };
 
-        let discrim = if let ResponseContent::Success { content: ResponseSuccess::ListenerSet { discrim } } = set_socket_res.await.unwrap() {
+        let discrim = if let ResponseContent::Success {
+            content: ResponseSuccess::ListenerSet { discrim },
+        } = set_socket_res.await.unwrap()
+        {
             discrim
         } else {
             panic!("no")
@@ -150,27 +158,29 @@ impl Client {
             inbound_recv: Arc::new(Mutex::new(inbound_recv)),
             outbound_send,
             request_socket: config.request_socket,
-            render_requests: Vec::new(),
+            render_requests: std::sync::Mutex::new(Vec::new()),
             req_confirms,
-            discrim
+            discrim,
         }
     }
 
-    /// get a unique request id
+    /// Generates a never-before-seen unique request ID.
     pub fn reqid() -> u32 {
-        let id = unsafe { REQID.get_mut() }.unwrap();
+        let mut id = REQID.get().unwrap().lock().unwrap();
         *id += 1;
         *id
     }
 
-    /// there should only be one recv() per program
-    /// more than one recv() at a time results in almost randomised behaviour
-    pub async fn recv(&self) -> Option<Event> {
-        self.inbound_recv.lock().await.recv().await
+    /// Waits for an event from ccanvas.
+    ///
+    /// There should only be one active `recv()` for each Client,
+    /// more than one `recv()` at a time leads to undetermined behaviour on who gets the event.
+    pub async fn recv(&self) -> Event {
+        self.inbound_recv.lock().await.recv().await.unwrap()
     }
 
-    /// send a request
-    /// private method as the convenience functions should be used instead
+    /// Send a request and waits for response
+    /// This is a private method as the task specific functions should be used instead.
     async fn send(&self, req: Request) -> ResponseContent {
         let (tx, rx) = oneshot::channel();
         self.req_confirms.lock().await.insert(req.id(), tx);
@@ -179,8 +189,9 @@ impl Client {
     }
 }
 
-/// convenience functions
+/// Task specific functions.
 impl Client {
+    /// Subscribe to one channel.
     pub async fn subscribe<T: Into<(Subscription, Option<u32>)>>(
         &self,
         channel: T,
@@ -197,6 +208,7 @@ impl Client {
         self.send(req).await
     }
 
+    /// Subscribe to multiple channels at once.
     pub async fn subscribe_multiple<T: Into<(Subscription, Option<u32>)>>(
         &self,
         channels: Vec<T>,
@@ -214,6 +226,7 @@ impl Client {
         self.send(req).await
     }
 
+    /// Unsubscribe from one channels.
     pub async fn unsubscribe(&self, channel: Subscription) -> ResponseContent {
         let req = Request::new(
             Discriminator::default(),
@@ -225,60 +238,95 @@ impl Client {
         self.send(req).await
     }
 
+    /// Tell the ccanvas server to exit immetiately.
+    ///
+    /// Alias to `self.drop_component(Discriminator::master())`
     pub async fn exit(&self) -> ResponseContent {
+        self.drop_component(Discriminator::master()).await
+    }
+
+    /// Drop a single component.
+    pub async fn drop_component(&self, discrim: Discriminator) -> ResponseContent {
         let req = Request::new(
             Discriminator::default(),
             RequestContent::Drop {
-                discrim: Some(Discriminator::new(vec![1])),
+                discrim: Some(discrim),
             },
         );
         self.send(req).await
     }
 
-    pub fn setchar(&mut self, x: u32, y: u32, c: char) {
-        self.render_requests.push(RenderRequest::setchar(x, y, c))
+    /// Add a set character task to the render queue.
+    pub fn setchar(&self, x: u32, y: u32, c: char) {
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::setchar(x, y, c))
     }
 
-    pub fn setcharcoloured(&mut self, x: u32, y: u32, c: char, fg: Colour, bg: Colour) {
+    /// Add a set character (coloured) task to the render queue.
+    pub fn setcharcoloured(&self, x: u32, y: u32, c: char, fg: Colour, bg: Colour) {
         self.render_requests
+            .lock()
+            .unwrap()
             .push(RenderRequest::setchar_coloured(x, y, c, fg, bg))
     }
 
-    pub fn setcursorstyle(&mut self, style: CursorStyle) {
-        self.render_requests.push(RenderRequest::setcursor(style))
+    /// Add a set cursor style task to render queue.
+    pub fn setcursorstyle(&self, style: CursorStyle) {
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::setcursor(style))
     }
 
+    /// Add a show cursor task to render queue.
     pub fn showcursor(&mut self) {
-        self.render_requests.push(RenderRequest::ShowCursor)
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::ShowCursor)
     }
 
+    /// Add a hide cursor task to render queue.
     pub fn hidecursor(&mut self) {
-        self.render_requests.push(RenderRequest::HideCursor)
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::HideCursor)
     }
 
+    /// Add a clear all task to render queue.
     pub fn clear_all(&mut self) {
-        self.render_requests.push(RenderRequest::ClearAll)
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::ClearAll)
     }
 
+    /// Flush and complete all tasks in render queue.
     pub async fn renderall(&mut self) -> ResponseContent {
-        if self.render_requests.is_empty() {
-            return ResponseContent::Success {
-                content: ResponseSuccess::Rendered,
-            };
-        }
+        let tasks = {
+            let mut render_requests = self.render_requests.lock().unwrap();
+            if render_requests.is_empty() {
+                return ResponseContent::Success {
+                    content: ResponseSuccess::Rendered,
+                };
+            }
+            std::mem::take(&mut *render_requests)
+        };
 
         let req = Request::new(
             Discriminator::default(),
             RequestContent::Render {
                 flush: true,
-                content: RenderRequest::RenderMultiple {
-                    tasks: std::mem::take(&mut self.render_requests),
-                },
+                content: RenderRequest::RenderMultiple { tasks },
             },
         );
         self.send(req).await
     }
 
+    /// Spawn a new process at a specific space.
     pub async fn spawn_at(
         &self,
         label: String,
@@ -297,6 +345,7 @@ impl Client {
         self.send(req).await
     }
 
+    /// Spawn a new process in the same parent space.
     pub async fn spawn(
         &self,
         label: String,
@@ -314,16 +363,22 @@ impl Client {
         self.send(req).await
     }
 
+    /// Set focus to a space.
     pub async fn focus_at(&self, discrim: Discriminator) -> ResponseContent {
         let req = Request::new(discrim, RequestContent::FocusAt);
         self.send(req).await
     }
 
+    /// Create a new space.
     pub async fn new_space(&self, parent: Discriminator, label: String) -> ResponseContent {
         let req = Request::new(parent, RequestContent::NewSpace { label });
         self.send(req).await
     }
 
+    /// Send a message to a component.
+    ///
+    /// If the selected component is a space, then all its members (including subspaces) will also
+    /// recieve the message. Including the sender copmonent.
     pub async fn message(&self, target: Discriminator, content: String) -> ResponseContent {
         let req = Request::new(
             target.clone(),
@@ -336,6 +391,9 @@ impl Client {
         self.send(req).await
     }
 
+    /// Send a message to all components, including self.
+    ///
+    /// Alias to `client.message(Discriminator::master(), message)`
     pub async fn broadcast(&self, content: String) -> ResponseContent {
         let req = Request::new(
             Discriminator::master(),
@@ -348,13 +406,27 @@ impl Client {
         self.send(req).await
     }
 
+    /// Get the discriminator of the current (process) component.
     pub fn discrim(&self) -> &Discriminator {
         &self.discrim
     }
 
+    /// Check if parent space is in focus.
+    ///
+    /// Returns true if it is the focused element, or child of the focused element.
     pub async fn is_focused(&self) -> bool {
-        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::IsFocused });
-        if let ResponseContent::Success { content: ResponseSuccess::Value { value: Value::Bool(b) } } = self.send(req).await {
+        let req = Request::new(
+            self.discrim.clone(),
+            RequestContent::GetState {
+                label: StateValue::IsFocused,
+            },
+        );
+        if let ResponseContent::Success {
+            content: ResponseSuccess::Value {
+                value: Value::Bool(b),
+            },
+        } = self.send(req).await
+        {
             b
         } else {
             // this isnt supposed to happen
@@ -362,27 +434,45 @@ impl Client {
         }
     }
 
+    /// Returns discriminator of the currently focused component.
     pub async fn focused(&self) -> Discriminator {
-        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::IsFocused });
-        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = self.send(req).await {
-            nu_json::from_value(value).unwrap()
+        let req = Request::new(
+            self.discrim.clone(),
+            RequestContent::GetState {
+                label: StateValue::IsFocused,
+            },
+        );
+        if let ResponseContent::Success {
+            content: ResponseSuccess::Value { value },
+        } = self.send(req).await
+        {
+            serde_json::from_value(value).unwrap()
         } else {
             // this isnt supposed to happen
             Discriminator::master()
         }
     }
 
+    /// Returns terminal size (x, y)
     pub async fn term_size(&self) -> (u32, u32) {
-        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::TermSize });
+        let req = Request::new(
+            self.discrim.clone(),
+            RequestContent::GetState {
+                label: StateValue::TermSize,
+            },
+        );
         let res = self.send(req).await;
-        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = res {
+        if let ResponseContent::Success {
+            content: ResponseSuccess::Value { value },
+        } = res
+        {
             #[derive(serde::Deserialize)]
             struct TermSize {
                 x: u32,
-                y: u32
+                y: u32,
             }
 
-            let termsize: TermSize = nu_json::from_value(value).unwrap();
+            let termsize: TermSize = serde_json::from_value(value).unwrap();
             (termsize.x, termsize.y)
         } else {
             // this isnt supposed to happen
@@ -390,69 +480,98 @@ impl Client {
         }
     }
 
+    /// Returns the full path to which the `ccanvas` command is ran.
     pub async fn current_directory(&self) -> PathBuf {
-        let req = Request::new(self.discrim.clone(), RequestContent::GetState { label: StateValue::WorkingDir });
+        let req = Request::new(
+            self.discrim.clone(),
+            RequestContent::GetState {
+                label: StateValue::WorkingDir,
+            },
+        );
         let res = self.send(req).await;
-        if let ResponseContent::Success { content: ResponseSuccess::Value { value } } = res {
-            nu_json::from_value(value).unwrap()
+        if let ResponseContent::Success {
+            content: ResponseSuccess::Value { value },
+        } = res
+        {
+            serde_json::from_value(value).unwrap()
         } else {
             PathBuf::new()
         }
     }
 
+    /// Subscribe to changes of a variable.
     pub async fn watch(&self, label: String, target: Discriminator) -> ResponseContent {
         let req = Request::new(target, RequestContent::Watch { label });
         self.send(req).await
     }
 
+    /// Remove subscription to changes of a variable.
     pub async fn unwatch(&self, label: String, target: Discriminator) -> ResponseContent {
-        let req = Request::new(target, RequestContent::Unwatch { label, watcher: self.discrim.clone() });
+        let req = Request::new(
+            target,
+            RequestContent::Unwatch {
+                label,
+                watcher: self.discrim.clone(),
+            },
+        );
         self.send(req).await
     }
 
+    /// Subscribe to changes of a variable owned by the current (process) component.
     pub async fn watch_self(&self, label: String) -> ResponseContent {
         self.watch(label, self.discrim.clone()).await
     }
 
+    /// Remove subscription to changes of a variable owned by the current (process) component.
     pub async fn unwatch_self(&self, label: String) -> ResponseContent {
         self.unwatch(label, self.discrim.clone()).await
     }
 
+    /// Set a variable.
     pub async fn set(&self, label: String, target: Discriminator, value: Value) -> ResponseContent {
         let req = Request::new(target, RequestContent::SetEntry { label, value });
         self.send(req).await
     }
 
+    /// Set a variable owned by the current (process) component.
     pub async fn set_self(&self, label: String, value: Value) -> ResponseContent {
         self.set(label, self.discrim.clone(), value).await
     }
 
+    /// Get a variable with raw responses.
     pub async fn get_raw(&self, label: String, target: Discriminator) -> ResponseContent {
         let req = Request::new(target, RequestContent::GetEntry { label });
         self.send(req).await
     }
 
+    /// Get a variable, returning an `Option<Value>`.
     pub async fn get(&self, label: String, target: Discriminator) -> Option<Value> {
         match self.get_raw(label, target).await {
-            ResponseContent::Success { content: ResponseSuccess::Value { value } } => Some(value),
-            _ => None
+            ResponseContent::Success {
+                content: ResponseSuccess::Value { value },
+            } => Some(value),
+            _ => None,
         }
     }
 
+    /// Get a variable owned by the current (process) component, returning an `Option<Value>`.
     pub async fn get_self(&self, label: String) -> Option<Value> {
         self.get(label, self.discrim.clone()).await
     }
 
+    /// Remove a variable.
     pub async fn remove(&self, label: String, target: Discriminator) -> ResponseContent {
         let req = Request::new(target, RequestContent::RemoveEntry { label });
         self.send(req).await
     }
 
+    /// Remove a variable owned by the current (process) component.
     pub async fn remove_self(&self, label: String) -> ResponseContent {
         self.remove(label, self.discrim.clone()).await
     }
 }
 
+/// Let the ccanvas server know when the client gets dropped.
 impl Drop for Client {
     fn drop(&mut self) {
         self.listener_handle.abort();
@@ -463,7 +582,7 @@ impl Drop for Client {
         );
         UnixStream::connect(self.request_socket.clone())
             .unwrap()
-            .write_all(nu_json::to_vec(&req).unwrap().as_slice())
+            .write_all(serde_json::to_vec(&req).unwrap().as_slice())
             .unwrap();
     }
 }

@@ -1,18 +1,35 @@
 [package]
 name = "libccanvas"
 version = "0.1.0"
+authors = ["siriusmart"]
 edition = "2021"
+description = "Utility for creating ccanvas components."
+license = "AGPL-3.0"
+repository = "https://github.com/ccanvas/libccanvas"
+exclude = ["/examples", "/subcrates"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 serde = { version = "1", features = [ "derive" ]}
 tokio = { version = "1", features = [ "sync", "rt", "rt-multi-thread" ]}
-nu-json = "0" # for config files
+serde_json = "1"
 
+# feature: config
+ccanvas-config-derive = { version = "0.1", optional = true }
+dirs = { version = "5", optional = true }
+jsonc-parser = { version = "0", features = ["serde"], optional = true }
+
+[features]
+default = []
+betterserde = []
+config = ["dep:ccanvas-config-derive", "dep:dirs", "dep:jsonc-parser"]
 
 [profile.release]
 strip = true
 lto = true
 opt-level = 3
 panic = "abort"
+
+[package.metadata.docs.rs]
+features = ["betterserde", "config"]

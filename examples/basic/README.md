@@ -10,7 +10,7 @@ This component shows how key events can be handled, and how the client can be ex
 
 ## How to run this component
 
-- [`ccanvas`](https://github.com/siriusmart/ccanvas) installed in system.
+- [`ccanvas`](https://github.com/ccanvas/ccanvas) installed in system.
 - Install the component using `cargo install --path .`
 
 Start the canvas using the command below.

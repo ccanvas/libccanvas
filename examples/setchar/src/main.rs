@@ -38,7 +38,8 @@ async fn main() {
     let mut x = 10;
     let mut y = 10;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         if let EventVariant::Key(key) = event.get() {
             match key.code {
                 KeyCode::Char('q') => {

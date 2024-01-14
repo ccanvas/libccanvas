@@ -1,10 +1,10 @@
 # libccanvas
 
-libccanvas makes easy for creating ccanvas components. For more information, see the [ccanvas](https://github.com/Siriusmart/ccanvas) main repository.
+libccanvas makes easy for creating ccanvas components. For more information, see the [ccanvas](https://github.com/ccanvas/ccanvas) main repository.
 
 ## Quickstart
 
-Your component will be ran by the canvas when loaded, get started by creating a client with `Client::default()`.
+Your component will be ran by the canvas when loaded, get started by creating a client with `Client::new(ClientConfig::default())`.
 
 > Please name your Rust project in format of `ccanvas-XXXXX` for identification.
 
@@ -28,23 +28,22 @@ async fn main() {
     // listen to all key presses
     client.subscribe(Subscription::AllKeyPresses).await;
 
-    // exit when 'q' is pressed
-    while let Some(event) = client.recv().await {
-
+    loop {
+        let event = client.recv().await;
+        // exit when 'q' is pressed
         if let EventVariant::Key(key) = event.get() {
             if key.code == KeyCode::Char('q') => {
                 client.exit().await;
                 break;
             }
         }
-
     }
 }
 ```
 
 ### Running the component
 
-> You will need [ccanvas](https://github.com/Siriusmart/ccanvas) installed on your system.
+> You will need [ccanvas](https://github.com/ccanvas/ccanvas) installed on your system.
 
 1. Install the component using cargo.
 ```sh
@@ -55,7 +54,7 @@ cargo install --path . # where `.` is your project directory
 ccanvas hello ccanvas-hello # where `ccanvas-hello` is the command to run your component
 ```
 
-You can find more examples of advance usage in [`/examples`](https://github.com/Siriusmart/libccanvas/tree/master/examples).
+You can find more examples of advance usage in [`/examples`](https://github.com/ccanvas/libccanvas/tree/master/examples).
 
 ## Implementation details
 
@@ -75,3 +74,7 @@ To preserve the order of requests, a client request will *await* until the serve
 ### Auto self destruct
 
 When `Client` goes out of scope, it will automatically call `drop` of self - thus removing it from the ccanvas session, avoiding the situation of a "ghost component".
+
+## Contribution
+
+Feel free to add implementation of your own API/bindings/functionalities to this crate under a non-default feature gate.

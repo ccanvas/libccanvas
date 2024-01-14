@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 pub struct ClientConfig {
-    /// path to the listener socket
+    /// Path to the listener socket
     pub listener_socket: PathBuf,
-    /// path to request socket
+    /// Path to request socket
     pub request_socket: PathBuf,
 }
 

@@ -9,7 +9,7 @@ I would recommend looking the 2 components in the following order:
 
 ## How to run this component
 
-- [`ccanvas`](https://github.com/siriusmart/ccanvas) installed in system.
+- [`ccanvas`](https://github.com/ccanvas/ccanvas) installed in system.
 - Install all 2 components components using `cargo install --path .`
 
 Start the canvas using the command below.

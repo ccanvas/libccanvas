@@ -11,10 +11,11 @@ async fn main() {
 
     // this is basically a forever loop
     // it always waits until the next event
-    while let Some(event) = client.recv().await {
-        match event.get() {
-            // check if 'q' is pressed
-            EventVariant::Key(key) if key.code == KeyCode::Char('q') => {
+    loop {
+        let event = client.recv().await;
+        // check if 'q' is pressed
+        if let EventVariant::Key(key) = event.get() {
+            if key.code == KeyCode::Char('q') {
                 // now that the client is clear, we can send a client.exit event
                 // to make it exit
                 client.exit().await;
@@ -23,7 +24,6 @@ async fn main() {
                 // as it will be killed automatically as the client exits
                 break;
             }
-            _ => {}
         }
     }
 }

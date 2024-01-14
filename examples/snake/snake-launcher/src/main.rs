@@ -26,11 +26,13 @@ async fn main() {
         .subscribe(Subscription::specific_keycode(KeyCode::Char('q')))
         .await;
 
+    loop {
+        let event = client.recv().await;
     // and listens for 'q' to exit the canvas
-    while let Some(event) = client.recv().await {
         if let EventVariant::Key(key) = event.get() {
             if key.code == KeyCode::Char('q') {
                 client.exit().await;
+                break;
             }
         }
     }

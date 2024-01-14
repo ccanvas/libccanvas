@@ -42,9 +42,9 @@ async fn main() {
     );
 
     // where the component should render to
-    let mut screen: Rect = nu_json::from_value(screen.unwrap()).unwrap();
+    let mut screen: Rect = serde_json::from_value(screen.unwrap()).unwrap();
     // currently exploring directory path
-    let mut path: PathBuf = nu_json::from_value(path.unwrap()).unwrap();
+    let mut path: PathBuf = serde_json::from_value(path.unwrap()).unwrap();
 
     // items in the current directory
     let mut items = dir_items(&path).unwrap();
@@ -58,7 +58,7 @@ async fn main() {
     let mut is_backspace = false;
 
     // set currently selected file path so explorer-file would know
-    client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+    client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
 
     // NOW, finally we can spawn in the file preview component
     client.spawn("file".to_string(), "ccanvas-explorer-file".to_string(), Vec::new()).await;
@@ -72,11 +72,12 @@ async fn main() {
         .watch("path".to_string(), Discriminator::master())
         .await;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         match event.get() {
             // rerender, nothing special
             EventVariant::ValueUpdated { label, new, .. } if label == "dir_screen" => {
-                screen = nu_json::from_value(new.clone()).unwrap();
+                screen = serde_json::from_value(new.clone()).unwrap();
                 update_scroll(&mut scroll, selected, screen);
                 render(&mut client, &items, selected, scroll, screen).await;
             }
@@ -87,11 +88,11 @@ async fn main() {
                 } else {
                     is_backspace = false;
                 }
-                path = nu_json::from_value(new.clone()).unwrap();
+                path = serde_json::from_value(new.clone()).unwrap();
                 items = match dir_items(&path) {
                     Some(items) => items,
                     None => {
-                        client.set("path".to_string(), Discriminator::master(), nu_json::to_value(&history.pop().unwrap()).unwrap()).await;
+                        client.set("path".to_string(), Discriminator::master(), serde_json::to_value(&history.pop().unwrap()).unwrap()).await;
                         is_backspace = true;
                         continue;
                     }
@@ -99,7 +100,7 @@ async fn main() {
                 selected = 0;
                 scroll = 0;
                 render(&mut client, &items, selected, scroll, screen).await;
-                client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+                client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
             }
             // just doing stuff with keys, nothing all that special really
             EventVariant::Key(key) => {
@@ -108,23 +109,23 @@ async fn main() {
                     KeyCode::Down => selected = selected.add(1).min(items.len().saturating_sub(1)),
                     KeyCode::Right | KeyCode::Char('\n') => if let Some(child) = items.get(selected) {
                         if child.is_dir() && fs::read_dir(child).is_ok() {
-                            client.set("path".to_string(), Discriminator::master(), nu_json::to_value(child).unwrap()).await;
-                            client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+                            client.set("path".to_string(), Discriminator::master(), serde_json::to_value(child).unwrap()).await;
+                            client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
                         }
                         continue;
                     } else {
                         continue;
                     }
                     KeyCode::Backspace if !history.is_empty() => {
-                            client.set("path".to_string(), Discriminator::master(), nu_json::to_value(&history.pop().unwrap()).unwrap()).await;
-                            client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+                            client.set("path".to_string(), Discriminator::master(), serde_json::to_value(&history.pop().unwrap()).unwrap()).await;
+                            client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
                             is_backspace = true;
                             continue;
                     }
                     KeyCode::Left => if let Some(parent) = path.parent() {
                         if fs::read_dir(parent).is_ok() {
-                            client.set("path".to_string(), Discriminator::master(), nu_json::to_value(parent).unwrap()).await;
-                            client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+                            client.set("path".to_string(), Discriminator::master(), serde_json::to_value(parent).unwrap()).await;
+                            client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
                         }
                         continue;
                     } else {
@@ -134,7 +135,7 @@ async fn main() {
                 }
 
                 // rerender!
-                client.set("selected".to_string(), Discriminator::master(), nu_json::to_value(&items.get(selected)).unwrap()).await;
+                client.set("selected".to_string(), Discriminator::master(), serde_json::to_value(&items.get(selected)).unwrap()).await;
                 update_scroll(&mut scroll, selected, screen);
                 render(&mut client, &items, selected, scroll, screen).await;
             }
@@ -184,8 +185,8 @@ async fn render(
     scroll: usize,
     screen: Rect,
 ) {
+    clear(client, screen);
 
-    clear(&mut client, screen);
     if items.is_empty() {
         client.renderall().await;
         return;

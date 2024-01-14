@@ -19,7 +19,8 @@ async fn main() {
     client.setcharcoloured(7, 0, '0', Colour::Red, Colour::Reset);
     client.renderall().await;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         if let EventVariant::Message { content, .. } = event.get() {
             for (x, c) in content.chars().enumerate() {
                 // draws the scroe in canvas

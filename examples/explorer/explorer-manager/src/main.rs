@@ -9,7 +9,7 @@ async fn main() {
     client.hidecursor();
     let mut screen_protect = render(&mut client, width, height).await;
 
-    client.set("path".to_string(), Discriminator::master(), nu_json::to_value(&client.current_directory().await).unwrap()).await;
+    client.set("path".to_string(), Discriminator::master(), serde_json::to_value(&client.current_directory().await).unwrap()).await;
 
     // load in the two components
     // but not explorer-file, as that should be loaded by dir
@@ -30,7 +30,9 @@ async fn main() {
         Subscription::specific_keycode(KeyCode::Char('\n')).with_priority(0),
     ]).await;
 
-    while let Some(mut event) = client.recv().await {
+    loop {
+        let mut event = client.recv().await;
+
         match event.get() {
             EventVariant::Key(key) if key.code == KeyCode::Char('q') => {
                 // exit if 'q' is pressed
@@ -137,9 +139,9 @@ async fn render(client: &mut Client, term_width: u32, term_height: u32) -> bool 
     // set the screen sizes
     // other components watching for change will recieve an event when these values change
     // other components also have a Rect to deseriaise the Value
-    client.set("dir_screen".to_string(), Discriminator::master(), nu_json::to_value(&dir_screen).unwrap()).await;
-    client.set("file_screen".to_string(), Discriminator::master(), nu_json::to_value(&file_screen).unwrap()).await;
-    client.set("path_screen".to_string(), Discriminator::master(), nu_json::to_value(&path_screen).unwrap()).await;
+    client.set("dir_screen".to_string(), Discriminator::master(), serde_json::to_value(&dir_screen).unwrap()).await;
+    client.set("file_screen".to_string(), Discriminator::master(), serde_json::to_value(&file_screen).unwrap()).await;
+    client.set("path_screen".to_string(), Discriminator::master(), serde_json::to_value(&path_screen).unwrap()).await;
 
     false
 }

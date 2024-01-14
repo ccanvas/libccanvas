@@ -1,38 +1,43 @@
 //! basically copied from the main repo of /ccanvas
-use nu_json::Value;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::bindings::Discriminator;
 
+/// All possible events you can get from `client.recv()`.
 #[derive(Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type")]
 pub enum EventVariant {
-    /// keyboard event
+    /// A keyboard event
     #[serde(rename = "key")]
     Key(KeyEvent),
-    /// mouse event
+    /// A mouse event
     #[serde(rename = "mouse")]
     Mouse(MouseEvent),
-    /// screen resize event (should trigger a rerender)
+    /// A screen resize event
     #[serde(rename = "resize")]
     Resize { width: u32, height: u32 },
-    /// message passed from another process
+    /// A message recieve
     #[serde(rename = "message")]
     Message {
         sender: Discriminator,
         target: Discriminator,
         content: String,
     },
+    /// Parent space focused
     #[serde(rename = "focused")]
     Focused,
+    /// Parent space unfocused
     #[serde(rename = "unfocused")]
     Unfocused,
+    /// Value of a variable has been changed
     #[serde(rename = "value updated")]
     ValueUpdated {
         label: String,
         new: Value,
         discrim: Discriminator,
     },
+    /// A variable has been removed
     #[serde(rename = "value removed")]
     ValueRemoved {
         label: String,
@@ -40,31 +45,40 @@ pub enum EventVariant {
     },
 }
 
+/// A keyboard event
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Hash)]
 pub struct KeyEvent {
-    /// the keycode represented by the characetr
+    /// The keycode represented by the key pressed.
     pub code: KeyCode,
-    /// key modifiers (e.g. ctrl)
+    /// Key modifiers (e.g. ctrl).
+    ///
+    /// Note that key modifiers are modifiers. They cannot exist on their own.
     pub modifier: KeyModifier,
 }
 
 impl KeyEvent {
+    /// Create a new KeyEvent from KeyCode and KeyModifier
     pub fn new(code: KeyCode, modifier: KeyModifier) -> Self {
         Self { code, modifier }
     }
 }
 
+/// A single key modifier
+///
+/// Shift is not a modifier, to see if a key press is "modified" by shift,
+/// check for the effect of shift, e.g. upper case alphabets.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Hash)]
 pub enum KeyModifier {
     #[serde(rename = "alt")]
     Alt,
-    /// note that certain keys may not be modifiable with ctrl, due to limitations of terminals.
+    /// Certain keys may not be modified with ctrl, due to limitations of terminals.
     #[serde(rename = "ctrl")]
     Ctrl,
     #[serde(rename = "none")]
     None,
 }
 
+/// A single key code
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, Hash)]
 pub enum KeyCode {
     /// Backspace.
@@ -119,15 +133,15 @@ pub enum KeyCode {
     Esc,
 }
 
+/// A single mouse event.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct MouseEvent {
-    /// where the mouse event is
     pub x: u32,
     pub y: u32,
-    /// what kind of event it is
     pub mousetype: MouseType,
 }
 
+/// What kind of event is the mouse event.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum MouseType {
     #[serde(rename = "left")]

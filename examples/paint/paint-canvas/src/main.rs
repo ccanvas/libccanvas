@@ -29,7 +29,8 @@ async fn main() {
 
     let mut mouse_mode: Option<MouseMode> = None;
 
-    while let Some(event) = client.recv().await {
+    loop {
+        let event = client.recv().await;
         match event.get() {
             // if ctrl z and there is a previous history state
             // then revert to that state and render
