@@ -132,6 +132,17 @@ pub enum RequestContent {
         label: String,
         watcher: Discriminator,
     },
+
+    /// Suppress all events from a channel for subscribers with a lower priority
+    #[serde(rename = "suppress")]
+    Suppress {
+        channel: Subscription,
+        priority: u32,
+    },
+
+    /// Remove a suppression
+    #[serde(rename = "unsuppress")]
+    Unsuppress { channel: Subscription, id: u32 },
 }
 
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]

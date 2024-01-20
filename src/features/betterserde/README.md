@@ -20,7 +20,7 @@ The better serde serialisation for `KeyEvent`, with `KeyEventBetterSerde`.
 ```json
 {
   "type": "char",
-  "value": 'a',
+  "value": "a",
   "modifier": "ctrl"
 }
 ```

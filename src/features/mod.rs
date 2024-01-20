@@ -2,3 +2,5 @@
 pub mod betterserde;
 #[cfg(feature = "config")]
 pub mod config;
+#[cfg(feature = "saver")]
+pub mod saver;

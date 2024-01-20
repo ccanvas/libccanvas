@@ -15,7 +15,7 @@ struct MyConfig {
 }
 ```
 
-In your code, you can used `MyConfig::load()` to load the config file.
+In your code, you can use `MyConfig::load()` to load the config file.
 
 
 ## Behaviour

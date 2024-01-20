@@ -20,7 +20,7 @@ use crate::bindings::{
     ResponseContent, ResponseSuccess, StateValue, Subscription,
 };
 
-use super::ClientConfig;
+use super::{ClientConfig, LifetimeSuppressor};
 
 /// Handles all interactions between the ccanvas server and your code.
 pub struct Client {
@@ -281,7 +281,7 @@ impl Client {
     }
 
     /// Add a show cursor task to render queue.
-    pub fn showcursor(&mut self) {
+    pub fn showcursor(&self) {
         self.render_requests
             .lock()
             .unwrap()
@@ -289,7 +289,7 @@ impl Client {
     }
 
     /// Add a hide cursor task to render queue.
-    pub fn hidecursor(&mut self) {
+    pub fn hidecursor(&self) {
         self.render_requests
             .lock()
             .unwrap()
@@ -297,7 +297,7 @@ impl Client {
     }
 
     /// Add a clear all task to render queue.
-    pub fn clear_all(&mut self) {
+    pub fn clear_all(&self) {
         self.render_requests
             .lock()
             .unwrap()
@@ -305,7 +305,7 @@ impl Client {
     }
 
     /// Flush and complete all tasks in render queue.
-    pub async fn renderall(&mut self) -> ResponseContent {
+    pub async fn renderall(&self) -> ResponseContent {
         let tasks = {
             let mut render_requests = self.render_requests.lock().unwrap();
             if render_requests.is_empty() {
@@ -568,6 +568,62 @@ impl Client {
     /// Remove a variable owned by the current (process) component.
     pub async fn remove_self(&self, label: String) -> ResponseContent {
         self.remove(label, self.discrim.clone()).await
+    }
+
+    /// Suppress all subscriptions of that channel with a lower than specified priority
+    pub async fn suppress_at(
+        &self,
+        channel: Subscription,
+        priority: u32,
+        target: Discriminator,
+    ) -> ResponseContent {
+        let req = Request::new(target, RequestContent::Suppress { channel, priority });
+        self.send(req).await
+    }
+
+    /// Remove suppress for a single suppressor
+    pub async fn unsuppress_at(
+        &self,
+        channel: Subscription,
+        id: u32,
+        target: Discriminator,
+    ) -> ResponseContent {
+        let req = Request::new(target, RequestContent::Unsuppress { channel, id });
+        self.send(req).await
+    }
+
+    /// Suppress a channel within the lifetime of the returned LifetimeSuppressor
+    pub async fn suppress(
+        &self,
+        channel: Subscription,
+        priority: u32,
+        target: Discriminator,
+    ) -> Option<LifetimeSuppressor> {
+        if let ResponseContent::Success {
+            content: ResponseSuccess::Suppressed { id },
+        } = self
+            .suppress_at(channel.clone(), priority, target.clone())
+            .await
+        {
+            Some(LifetimeSuppressor::new(
+                id,
+                channel,
+                target,
+                self.outbound_send.clone(),
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Remove suppress using a lifetime suppressor.
+    pub async fn unsuppress(&self, suppressor: LifetimeSuppressor) -> bool {
+        if let Some((id, channel, target, _)) = suppressor.deconstruct() {
+            self.unsuppress_at(channel, id, target).await;
+            true
+        } else {
+            false
+        }
     }
 }
 

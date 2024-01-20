@@ -106,7 +106,10 @@ impl From<KeyCodeBetterSerde> for KeyCode {
 
 impl From<KeyEvent> for KeyEventBetterSerde {
     fn from(value: KeyEvent) -> Self {
-        Self { code: value.code.into(), modifier: value.modifier }
+        Self {
+            code: value.code.into(),
+            modifier: value.modifier,
+        }
     }
 }
 
@@ -125,8 +128,8 @@ impl From<KeyCode> for KeyCodeBetterSerde {
             KeyCode::BackTab => Self::BackTab,
             KeyCode::Delete => Self::Delete,
             KeyCode::Insert => Self::Insert,
-            KeyCode::F(value) => Self::F{ value },
-            KeyCode::Char(value) => Self::Char{ value },
+            KeyCode::F(value) => Self::F { value },
+            KeyCode::Char(value) => Self::Char { value },
             KeyCode::Null => Self::Null,
             KeyCode::Esc => Self::Esc,
         }

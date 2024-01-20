@@ -6,6 +6,9 @@ use crate::bindings::{Discriminator, KeyCode, KeyEvent, KeyModifier, MouseType};
 #[serde(tag = "type")]
 /// A single subscription channel.
 pub enum Subscription {
+    /// Every single event
+    #[serde(rename = "everything")]
+    Everything,
     /// All key press events
     #[serde(rename = "all key presses")]
     AllKeyPresses,
