@@ -75,6 +75,6 @@ To preserve the order of requests, a client request will *await* until the serve
 
 When `Client` goes out of scope, it will automatically call `drop` of self - thus removing it from the ccanvas session, avoiding the situation of a "ghost component".
 
-## Contribution
+## Features
 
-Feel free to add implementation of your own API/bindings/functionalities to this crate under a non-default feature gate.
+Feel free to add implementation of your own API/bindings/functionalities to this crate under a non-default feature gate. Check [`src/features`](https://github.com/ccanvas/libccanvas/tree/master/src/features) for more info.

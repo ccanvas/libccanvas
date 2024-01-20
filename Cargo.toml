@@ -1,6 +1,6 @@
 [package]
 name = "libccanvas"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["siriusmart"]
 edition = "2021"
 description = "Utility for creating ccanvas components."
