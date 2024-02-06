@@ -22,7 +22,8 @@ pub enum EventVariant {
     Message {
         sender: Discriminator,
         target: Discriminator,
-        content: String,
+        content: Value,
+        tag: String,
     },
     /// Parent space focused
     #[serde(rename = "focused")]

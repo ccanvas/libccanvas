@@ -33,6 +33,9 @@ pub enum Subscription {
     /// A message from a specific component
     #[serde(rename = "specific message")]
     SpecificMessage { source: Discriminator },
+    /// A message with a specific tag
+    #[serde(rename = "specific message tag")]
+    SpecificMessageTag { tag: String },
     /// Screen resize events
     #[serde(rename = "screen resize")]
     ScreenResize,
@@ -69,6 +72,10 @@ impl Subscription {
 
     pub fn specific_message(source: Discriminator) -> Self {
         Self::SpecificMessage { source }
+    }
+
+    pub fn specific_message_tag(tag: String) -> Self {
+        Self::SpecificMessageTag { tag }
     }
 
     pub fn with_priority(self, priority: u32) -> (Self, Option<u32>) {

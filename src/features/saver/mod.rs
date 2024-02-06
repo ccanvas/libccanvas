@@ -1,21 +1,9 @@
-use serde::{Deserialize, Serialize};
-
 use crate::{bindings::Discriminator, client::Client};
+
+use super::common::Dimension;
 
 pub const SAVER_DIMENSION_LABEL: &str = "!ccanvas-saver-dimensions";
 pub const SAVER_ISON_LABEL: &str = "!ccanvas-saver-ison";
-
-#[derive(Serialize, Deserialize)]
-pub struct SaverDimension {
-    width: u32,
-    height: u32,
-}
-
-impl SaverDimension {
-    pub fn new(width: u32, height: u32) -> Self {
-        Self { width, height }
-    }
-}
 
 impl Client {
     /// Enable screen saver with a specific dimension.
@@ -23,7 +11,7 @@ impl Client {
         self.set(
             SAVER_DIMENSION_LABEL.to_string(),
             Discriminator::master(),
-            serde_json::to_value(SaverDimension::new(min_width, min_height)).unwrap(),
+            serde_json::to_value(Dimension::new(min_width, min_height)).unwrap(),
         )
         .await;
     }

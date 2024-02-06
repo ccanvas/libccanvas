@@ -12,13 +12,25 @@ pub struct Event {
     content: EventVariant,
     /// confirmation handle to release the event
     confirm: Mutex<Option<(u32, UnboundedSender<Request>)>>,
+
+    #[cfg(feature = "layout")]
+    // sender, this discrim
+    // confirm to layout that it is rendered
+    layout_confirm: Mutex<Option<(UnboundedSender<Request>, Discriminator)>>,
 }
 
 impl Event {
-    pub fn new(content: EventVariant, sender: UnboundedSender<Request>, confirm: u32) -> Self {
+    pub fn new(
+        content: EventVariant,
+        sender: UnboundedSender<Request>,
+        confirm: u32,
+        #[cfg(feature = "layout")] self_discrim: Discriminator,
+    ) -> Self {
         Self {
             content,
-            confirm: Mutex::new(Some((confirm, sender))),
+            confirm: Mutex::new(Some((confirm, sender.clone()))),
+            #[cfg(feature = "layout")]
+            layout_confirm: Mutex::new(Some((sender, self_discrim))),
         }
     }
 
@@ -34,6 +46,22 @@ impl Event {
                     RequestContent::ConfirmRecieve { id, pass },
                 ))
                 .unwrap();
+        }
+
+        #[cfg(feature = "layout")]
+        {
+            let mut layout_confirm = self.layout_confirm.lock().unwrap();
+            if let Some((sender, discrim)) = std::mem::take(&mut *layout_confirm) {
+                sender
+                    .send(Request::new(
+                        discrim,
+                        RequestContent::SetEntry {
+                            label: crate::features::layout::LAYOUT_CONFIRM.to_string(),
+                            value: serde_json::Value::Null,
+                        },
+                    ))
+                    .unwrap();
+            }
         }
     }
 

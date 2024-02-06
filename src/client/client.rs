@@ -1,8 +1,9 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     io::{Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
+    process,
     sync::Arc,
 };
 
@@ -49,6 +50,11 @@ static REQID: OnceCell<std::sync::Mutex<u32>> = OnceCell::const_new_with(std::sy
 impl Client {
     /// Create a new instance of self, will panic if connection fails.
     pub async fn new(config: ClientConfig) -> Self {
+        if !std::env::var("CCANVAS_COMPONENT").is_ok_and(|val| val.as_str() == "1") {
+            println!("Compontent not ran from by ccanvas, please run with CCANVAS_COMPONENT=1 if it is what you want.");
+            process::exit(-1);
+        }
+
         if !config.request_socket.exists() {
             panic!("request socket not found, a component is not to be executed outside context of a canvas");
         }
@@ -78,6 +84,9 @@ impl Client {
             .write_all(serde_json::to_vec(&set_socket).unwrap().as_slice())
             .unwrap();
 
+        #[cfg(feature = "layout")]
+        static SELF_DISCRIM: OnceCell<Discriminator> = OnceCell::const_new();
+
         let listener_handle = {
             let outbound_send = outbound_send.clone();
             let req_confirms = req_confirms.clone();
@@ -103,8 +112,21 @@ impl Client {
                     match res.content {
                         // events have to be confirmed
                         ResponseContent::Event { content } => {
+                            #[cfg(not(feature = "layout"))]
                             inbound_send
                                 .send(Event::new(content, outbound_send.clone(), res.id))
+                                .unwrap();
+                            #[cfg(feature = "layout")]
+                            inbound_send
+                                .send(Event::new(
+                                    content,
+                                    outbound_send.clone(),
+                                    res.id,
+                                    SELF_DISCRIM
+                                        .get()
+                                        .map(Discriminator::clone)
+                                        .unwrap_or_else(Discriminator::master),
+                                ))
                                 .unwrap();
                         }
                         // these are responses from canvas
@@ -152,6 +174,9 @@ impl Client {
             panic!("no")
         };
 
+        #[cfg(feature = "layout")]
+        SELF_DISCRIM.set(discrim.clone()).unwrap();
+
         Self {
             listener_handle,
             request_handle,
@@ -181,7 +206,7 @@ impl Client {
 
     /// Send a request and waits for response
     /// This is a private method as the task specific functions should be used instead.
-    async fn send(&self, req: Request) -> ResponseContent {
+    pub async fn send(&self, req: Request) -> ResponseContent {
         let (tx, rx) = oneshot::channel();
         self.req_confirms.lock().await.insert(req.id(), tx);
         self.outbound_send.send(req).unwrap();
@@ -340,6 +365,28 @@ impl Client {
                 command,
                 args,
                 label,
+                env: BTreeMap::new(),
+            },
+        );
+        self.send(req).await
+    }
+
+    /// Spawn a new process at a specific space with environment vars
+    pub async fn spawn_with_env_at(
+        &self,
+        label: String,
+        command: String,
+        args: Vec<String>,
+        parent: Discriminator,
+        env: BTreeMap<String, String>,
+    ) -> ResponseContent {
+        let req = Request::new(
+            parent,
+            RequestContent::Spawn {
+                command,
+                args,
+                label,
+                env,
             },
         );
         self.send(req).await
@@ -358,6 +405,27 @@ impl Client {
                 command,
                 args,
                 label,
+                env: BTreeMap::new(),
+            },
+        );
+        self.send(req).await
+    }
+
+    /// Spawn a new process in the same parent space.
+    pub async fn spawn_with_env(
+        &self,
+        label: String,
+        command: String,
+        args: Vec<String>,
+        env: BTreeMap<String, String>,
+    ) -> ResponseContent {
+        let req = Request::new(
+            Discriminator::default(),
+            RequestContent::Spawn {
+                command,
+                args,
+                label,
+                env,
             },
         );
         self.send(req).await
@@ -379,13 +447,19 @@ impl Client {
     ///
     /// If the selected component is a space, then all its members (including subspaces) will also
     /// recieve the message. Including the sender copmonent.
-    pub async fn message(&self, target: Discriminator, content: String) -> ResponseContent {
+    pub async fn message(
+        &self,
+        target: Discriminator,
+        content: Value,
+        tag: String,
+    ) -> ResponseContent {
         let req = Request::new(
             target.clone(),
             RequestContent::Message {
                 content,
                 sender: Discriminator::default(),
                 target,
+                tag,
             },
         );
         self.send(req).await
@@ -394,13 +468,14 @@ impl Client {
     /// Send a message to all components, including self.
     ///
     /// Alias to `client.message(Discriminator::master(), message)`
-    pub async fn broadcast(&self, content: String) -> ResponseContent {
+    pub async fn broadcast(&self, content: Value, tag: String) -> ResponseContent {
         let req = Request::new(
             Discriminator::master(),
             RequestContent::Message {
                 content,
                 sender: Discriminator::default(),
                 target: Discriminator::master(),
+                tag,
             },
         );
         self.send(req).await

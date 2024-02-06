@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{bindings::Discriminator, client::Client};
@@ -82,6 +82,7 @@ pub enum RequestContent {
     Spawn {
         command: String,
         args: Vec<String>,
+        env: BTreeMap<String, String>,
         label: String,
     },
 
@@ -90,9 +91,10 @@ pub enum RequestContent {
     /// If target specifies a space,
     /// all components under that space will recieve the message.
     Message {
-        content: String,
+        content: Value,
         sender: Discriminator,
         target: Discriminator,
+        tag: String,
     },
 
     /// Create a new space at a space.
@@ -217,7 +219,7 @@ pub enum CursorStyle {
     SteadyUnderline,
 }
 
-#[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(tag = "type")]
 /// Terminal colours.
 pub enum Colour {

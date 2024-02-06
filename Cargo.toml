@@ -1,6 +1,6 @@
 [package]
 name = "libccanvas"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["siriusmart"]
 edition = "2021"
 description = "Utility for creating ccanvas components."
@@ -23,7 +23,9 @@ jsonc-parser = { version = "0", features = ["serde"], optional = true }
 [features]
 default = []
 betterserde = []
-saver = []
+saver = ["common"]
+layout = ["common"]
+common = []
 config = ["dep:ccanvas-config-derive", "dep:dirs", "dep:jsonc-parser"]
 
 [profile.release]
