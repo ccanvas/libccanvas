@@ -23,12 +23,13 @@ use crate::bindings::{
 
 use super::{ClientConfig, LifetimeSuppressor};
 
+#[derive(Clone)]
 /// Handles all interactions between the ccanvas server and your code.
 pub struct Client {
     /// task handle to the listener loop
-    listener_handle: JoinHandle<()>,
+    listener_handle: Arc<std::sync::Mutex<JoinHandle<()>>>,
     /// task handle for sender loop
-    request_handle: JoinHandle<()>,
+    request_handle: Arc<std::sync::Mutex<JoinHandle<()>>>,
     /// incoming events
     inbound_recv: Arc<Mutex<UnboundedReceiver<Event>>>,
     /// request to ccanvas
@@ -40,7 +41,7 @@ pub struct Client {
     /// path to request socket
     request_socket: PathBuf,
     /// unflushed render requests
-    render_requests: std::sync::Mutex<Vec<RenderRequest>>,
+    render_requests: Arc<std::sync::Mutex<Vec<RenderRequest>>>,
     /// confirmation handles for requests
     req_confirms: Arc<Mutex<HashMap<u32, oneshot::Sender<ResponseContent>>>>,
 }
@@ -178,12 +179,12 @@ impl Client {
         SELF_DISCRIM.set(discrim.clone()).unwrap();
 
         Self {
-            listener_handle,
-            request_handle,
+            listener_handle: std::sync::Mutex::new(listener_handle).into(),
+            request_handle: std::sync::Mutex::new(request_handle).into(),
             inbound_recv: Arc::new(Mutex::new(inbound_recv)),
             outbound_send,
             request_socket: config.request_socket,
-            render_requests: std::sync::Mutex::new(Vec::new()),
+            render_requests: std::sync::Mutex::new(Vec::new()).into(),
             req_confirms,
             discrim,
         }
@@ -705,8 +706,8 @@ impl Client {
 /// Let the ccanvas server know when the client gets dropped.
 impl Drop for Client {
     fn drop(&mut self) {
-        self.listener_handle.abort();
-        self.request_handle.abort();
+        self.listener_handle.lock().unwrap().abort();
+        self.request_handle.lock().unwrap().abort();
         let req = Request::new(
             Discriminator::default(),
             RequestContent::Drop { discrim: None },
