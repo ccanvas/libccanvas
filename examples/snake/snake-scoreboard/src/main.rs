@@ -5,9 +5,9 @@ use libccanvas::{
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::new(ClientConfig::default()).await;
+    let client = Client::new(ClientConfig::default()).await;
     // listen to all messages - including broadcasts from snake-main
-    client.subscribe(Subscription::AllMessages).await;
+    client.subscribe(Subscription::specific_message_tag("score".to_string())).await;
 
     // draws "Score: 0" in canvas
     client.setchar(0, 0, 'S');
@@ -22,7 +22,9 @@ async fn main() {
     loop {
         let event = client.recv().await;
         if let EventVariant::Message { content, .. } = event.get() {
-            for (x, c) in content.chars().enumerate() {
+            let content: u32 = serde_json::from_value(content.clone()).unwrap();
+
+            for (x, c) in content.to_string().chars().enumerate() {
                 // draws the scroe in canvas
                 client.setcharcoloured(7 + x as u32, 0, c, Colour::LightRed, Colour::Reset);
                 client.renderall().await;

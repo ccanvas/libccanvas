@@ -31,7 +31,7 @@ async fn main() {
     ]).await;
 
     loop {
-        let mut event = client.recv().await;
+        let event = client.recv().await;
 
         match event.get() {
             EventVariant::Key(key) if key.code == KeyCode::Char('q') => {

@@ -36,7 +36,9 @@ impl Snake {
             *score += 1;
             // and broadcast the new score
             // so the scoreboard component will draw the new score
-            client.broadcast(score.to_string()).await;
+            client
+                .broadcast(serde_json::to_value(score).unwrap(), "score".to_string())
+                .await;
         } else {
             // remove tail
             let (tailx, taily) = self.body.pop_back().unwrap();

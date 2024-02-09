@@ -2,7 +2,7 @@ use libccanvas::{bindings::*, client::*};
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::new(ClientConfig::default()).await;
+    let client = Client::new(ClientConfig::default()).await;
     client
         .subscribe_multiple(vec![
             Subscription::specific_keycode(KeyCode::Up),
