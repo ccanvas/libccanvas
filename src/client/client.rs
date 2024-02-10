@@ -154,6 +154,7 @@ impl Client {
                                         }
                                     }
                                 }
+                                crate::bindings::EventVariant::Resize { .. } => continue,
                                 _ => {}
                             }
 
@@ -272,6 +273,14 @@ impl Client {
         channel: T,
     ) -> ResponseContent {
         let (channel, priority) = channel.into();
+
+        #[cfg(feature = "layout")]
+        if channel == Subscription::ScreenResize {
+            return ResponseContent::Success {
+                content: ResponseSuccess::SubscribeAdded,
+            };
+        }
+
         let req = Request::new(
             Discriminator::default(),
             RequestContent::Subscribe {
@@ -288,12 +297,37 @@ impl Client {
         &self,
         channels: Vec<T>,
     ) -> ResponseContent {
+        #[cfg(not(feature = "layout"))]
+        let subs = channels.into_iter().map(|item| item.into()).collect();
+
+        #[cfg(feature = "layout")]
+        let subs: Vec<(Subscription, Option<u32>)> = if self.layout.is_some() {
+            channels.into_iter().map(|item| item.into()).collect()
+        } else {
+            channels
+                .into_iter()
+                .filter_map(|item| {
+                    let item = item.into();
+
+                    if item.0 == Subscription::ScreenResize {
+                        return None;
+                    }
+
+                    Some(item)
+                })
+                .collect()
+        };
+
+        if subs.is_empty() {
+            return ResponseContent::Success {
+                content: ResponseSuccess::Rendered,
+            };
+        }
+
         let req = Request::new(
             Discriminator::default(),
             RequestContent::Subscribe {
-                channel: Subscription::Multiple {
-                    subs: channels.into_iter().map(|item| item.into()).collect(),
-                },
+                channel: Subscription::Multiple { subs },
                 priority: None,
                 component: None,
             },
