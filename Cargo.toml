@@ -21,7 +21,7 @@ dirs = { version = "5", optional = true }
 jsonc-parser = { version = "0", features = ["serde"], optional = true }
 
 [features]
-default = []
+default = [ "layout" ]
 betterserde = []
 saver = ["common"]
 layout = ["common"]

@@ -154,7 +154,11 @@ impl Client {
                                         }
                                     }
                                 }
-                                crate::bindings::EventVariant::Resize { .. } => continue,
+                                crate::bindings::EventVariant::Resize { .. }
+                                    if layout.is_some() =>
+                                {
+                                    continue
+                                }
                                 _ => {}
                             }
 
@@ -275,7 +279,7 @@ impl Client {
         let (channel, priority) = channel.into();
 
         #[cfg(feature = "layout")]
-        if channel == Subscription::ScreenResize {
+        if self.layout.is_some() && channel == Subscription::ScreenResize {
             return ResponseContent::Success {
                 content: ResponseSuccess::SubscribeAdded,
             };
@@ -298,10 +302,11 @@ impl Client {
         channels: Vec<T>,
     ) -> ResponseContent {
         #[cfg(not(feature = "layout"))]
-        let subs = channels.into_iter().map(|item| item.into()).collect();
+        let subs: Vec<(Subscription, Option<u32>)> =
+            channels.into_iter().map(|item| item.into()).collect();
 
         #[cfg(feature = "layout")]
-        let subs: Vec<(Subscription, Option<u32>)> = if self.layout.is_some() {
+        let subs: Vec<(Subscription, Option<u32>)> = if self.layout.is_none() {
             channels.into_iter().map(|item| item.into()).collect()
         } else {
             channels
@@ -320,7 +325,7 @@ impl Client {
 
         if subs.is_empty() {
             return ResponseContent::Success {
-                content: ResponseSuccess::Rendered,
+                content: ResponseSuccess::SubscribeAdded,
             };
         }
 
