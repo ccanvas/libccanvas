@@ -265,6 +265,22 @@ pub enum Colour {
     Rgb { red: u8, green: u8, blue: u8 },
 }
 
+impl Colour {
+    /// Construct an ansi colour struct
+    pub fn ansi(value: u8) -> Self {
+        Self::Ansi { value }
+    }
+
+    /// Construct an rgb colour struct
+    pub fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self::Rgb {
+            red: r,
+            green: g,
+            blue: b,
+        }
+    }
+}
+
 /// Intrinsic state values
 #[derive(Serialize, Clone, PartialEq, Eq, Debug)]
 pub enum StateValue {

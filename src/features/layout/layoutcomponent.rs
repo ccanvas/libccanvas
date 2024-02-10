@@ -6,19 +6,24 @@ use crate::{
 
 use super::{Border, Constraint, Layout};
 
+/// Convenient struct representing a ccanvas-layout component
 #[derive(Clone)]
 pub struct LayoutComponent {
+    /// copy of client
     client: Client,
+    /// discrim of ccanvas-layout
     discrim: Discriminator,
 }
 
 impl LayoutComponent {
+    /// Construct a new LayoutComponent from client and discriminator for ccanvas-layout
     pub fn new(client: Client, discrim: Discriminator) -> Self {
         Self { client, discrim }
     }
 }
 
 impl LayoutComponent {
+    /// Add a new layout section
     pub async fn add(
         &self,
         at: Vec<Direction>,
@@ -41,6 +46,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new blank layout section
     pub async fn add_blank(
         &self,
         at: Vec<Direction>,
@@ -61,6 +67,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new component layout section
     pub async fn add_component(
         &self,
         at: Vec<Direction>,
@@ -83,6 +90,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new layout section below target
     pub async fn add_below(
         &self,
         at: Vec<Direction>,
@@ -103,6 +111,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new layout section above target
     pub async fn add_above(
         &self,
         at: Vec<Direction>,
@@ -123,6 +132,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new layout section to the left of target
     pub async fn add_left(
         &self,
         at: Vec<Direction>,
@@ -143,6 +153,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new layout section to the right of target
     pub async fn add_right(
         &self,
         at: Vec<Direction>,
@@ -163,6 +174,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered layout section
     pub async fn add_bordered(
         &self,
         at: Vec<Direction>,
@@ -185,6 +197,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered layout section
     pub async fn add_unbordered(
         &self,
         at: Vec<Direction>,
@@ -207,6 +220,7 @@ impl LayoutComponent {
 }
 
 impl LayoutComponent {
+    /// Add a new blank layout section above target
     pub async fn add_blank_above(
         &self,
         at: Vec<Direction>,
@@ -225,6 +239,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new blank layout section below target
     pub async fn add_blank_below(
         &self,
         at: Vec<Direction>,
@@ -243,6 +258,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new blank layout section to the left of target
     pub async fn add_blank_left(
         &self,
         at: Vec<Direction>,
@@ -261,6 +277,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new blank layout section to the right of target
     pub async fn add_blank_right(
         &self,
         at: Vec<Direction>,
@@ -279,6 +296,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new component layout section above target
     pub async fn add_component_above(
         &self,
         at: Vec<Direction>,
@@ -299,6 +317,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new component layout section below target
     pub async fn add_component_below(
         &self,
         at: Vec<Direction>,
@@ -319,6 +338,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new component layout section to the left of target
     pub async fn add_component_left(
         &self,
         at: Vec<Direction>,
@@ -339,6 +359,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new component layout section to the right of target
     pub async fn add_component_right(
         &self,
         at: Vec<Direction>,
@@ -359,6 +380,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered layout section above target
     pub async fn add_bordered_above(
         &self,
         at: Vec<Direction>,
@@ -379,6 +401,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered layout section below target
     pub async fn add_bordered_below(
         &self,
         at: Vec<Direction>,
@@ -399,6 +422,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered layout section to the left of target
     pub async fn add_bordered_left(
         &self,
         at: Vec<Direction>,
@@ -419,6 +443,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered layout section to the right of target
     pub async fn add_bordered_right(
         &self,
         at: Vec<Direction>,
@@ -439,6 +464,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered layout section above target
     pub async fn add_unbordered_above(
         &self,
         at: Vec<Direction>,
@@ -457,6 +483,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered layout section below target
     pub async fn add_unbordered_below(
         &self,
         at: Vec<Direction>,
@@ -475,6 +502,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered layout section to the left of target
     pub async fn add_unbordered_left(
         &self,
         at: Vec<Direction>,
@@ -493,6 +521,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered layout section to the right of target
     pub async fn add_unbordered_right(
         &self,
         at: Vec<Direction>,
@@ -513,6 +542,7 @@ impl LayoutComponent {
 }
 
 impl LayoutComponent {
+    /// Add a new bordered blank layout section
     pub async fn add_bordered_blank(
         &self,
         at: Vec<Direction>,
@@ -533,6 +563,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered blank layout section
     pub async fn add_unbordered_blank(
         &self,
         at: Vec<Direction>,
@@ -551,6 +582,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered component layout section
     pub async fn add_bordered_component(
         &self,
         at: Vec<Direction>,
@@ -573,6 +605,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered component layout section
     pub async fn add_unbordered_component(
         &self,
         at: Vec<Direction>,
@@ -595,6 +628,7 @@ impl LayoutComponent {
 }
 
 impl LayoutComponent {
+    /// Add a new bordered blank layout section above target
     pub async fn add_bordered_blank_above(
         &self,
         at: Vec<Direction>,
@@ -613,6 +647,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered blank layout section below target
     pub async fn add_bordered_blank_below(
         &self,
         at: Vec<Direction>,
@@ -631,6 +666,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered blank layout section to the left of target
     pub async fn add_bordered_blank_left(
         &self,
         at: Vec<Direction>,
@@ -649,6 +685,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered blank layout section to the right of target
     pub async fn add_bordered_blank_right(
         &self,
         at: Vec<Direction>,
@@ -667,6 +704,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered component layout section above target
     pub async fn add_bordered_component_above(
         &self,
         at: Vec<Direction>,
@@ -687,6 +725,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered component layout section below target
     pub async fn add_bordered_component_below(
         &self,
         at: Vec<Direction>,
@@ -707,6 +746,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered component layout section to the left of target
     pub async fn add_bordered_component_left(
         &self,
         at: Vec<Direction>,
@@ -727,6 +767,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new bordered component layout section to the right of target
     pub async fn add_bordered_component_right(
         &self,
         at: Vec<Direction>,
@@ -747,6 +788,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered blank layout section above target
     pub async fn add_unbordered_blank_above(
         &self,
         at: Vec<Direction>,
@@ -763,6 +805,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered blank layout section below target
     pub async fn add_unbordered_blank_below(
         &self,
         at: Vec<Direction>,
@@ -779,6 +822,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered blank layout section to the left of target
     pub async fn add_unbordered_blank_left(
         &self,
         at: Vec<Direction>,
@@ -795,6 +839,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered blank layout section to the right of target
     pub async fn add_unbordered_blank_right(
         &self,
         at: Vec<Direction>,
@@ -811,6 +856,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered component layout section above target
     pub async fn add_unbordered_component_above(
         &self,
         at: Vec<Direction>,
@@ -829,6 +875,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered component layout section below target
     pub async fn add_unbordered_component_below(
         &self,
         at: Vec<Direction>,
@@ -847,6 +894,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered component layout section to the left of target
     pub async fn add_unbordered_component_left(
         &self,
         at: Vec<Direction>,
@@ -865,6 +913,7 @@ impl LayoutComponent {
             .await
     }
 
+    /// Add a new unbordered component layout section to the right of target
     pub async fn add_unbordered_component_right(
         &self,
         at: Vec<Direction>,
@@ -885,16 +934,19 @@ impl LayoutComponent {
 }
 
 impl LayoutComponent {
+    /// Remove a layout section
     pub async fn remove(&self, at: Vec<Direction>) -> ResponseContent {
         self.client.layout_remove(self.discrim.clone(), at).await
     }
 
+    /// Overwrite a layout section
     pub async fn set(&self, at: Vec<Direction>, layout: Layout) -> ResponseContent {
         self.client
             .layout_set(self.discrim.clone(), at, layout)
             .await
     }
 
+    /// Overwrite the root layout section
     pub async fn set_root(&self, layout: Layout) -> ResponseContent {
         self.client
             .layout_set_root(self.discrim.clone(), layout)

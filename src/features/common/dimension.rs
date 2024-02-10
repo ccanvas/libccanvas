@@ -11,3 +11,9 @@ impl Dimension {
         Self { width, height }
     }
 }
+
+impl From<(u32, u32)> for Dimension {
+    fn from((width, height): (u32, u32)) -> Self {
+        Self::new(width, height)
+    }
+}

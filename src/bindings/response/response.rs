@@ -124,3 +124,68 @@ pub enum ResponseSuccess {
     #[serde(rename = "unsuppressed")]
     Unsuppressed,
 }
+
+impl ResponseContent {
+    pub fn is_undelivered(&self) -> bool {
+        self == &Self::Undelivered
+    }
+
+    pub fn is_delivered(&self) -> bool {
+        !self.is_undelivered()
+    }
+
+    pub fn as_spawned(&self) -> Option<&Discriminator> {
+        if let Self::Success {
+            content: ResponseSuccess::Spawned { discrim },
+        } = self
+        {
+            Some(discrim)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_spawned(self) -> Option<Discriminator> {
+        if let Self::Success {
+            content: ResponseSuccess::Spawned { discrim },
+        } = self
+        {
+            Some(discrim)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_value(&self) -> Option<&Value> {
+        if let Self::Success {
+            content: ResponseSuccess::Value { value },
+        } = self
+        {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_value(self) -> Option<Value> {
+        if let Self::Success {
+            content: ResponseSuccess::Value { value },
+        } = self
+        {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_suppressed(&self) -> Option<u32> {
+        if let Self::Success {
+            content: ResponseSuccess::Suppressed { id },
+        } = self
+        {
+            Some(*id)
+        } else {
+            None
+        }
+    }
+}

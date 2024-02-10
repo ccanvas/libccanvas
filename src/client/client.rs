@@ -44,14 +44,19 @@ pub struct Client {
     render_requests: Arc<std::sync::Mutex<Vec<RenderRequest>>>,
     /// confirmation handles for requests
     req_confirms: Arc<Mutex<HashMap<u32, oneshot::Sender<ResponseContent>>>>,
+
+    #[cfg(feature = "layout")]
+    /// layout information - term size
+    layout: Option<Arc<std::sync::Mutex<crate::features::layout::LayoutInfo>>>,
 }
 
 static REQID: OnceCell<std::sync::Mutex<u32>> = OnceCell::const_new_with(std::sync::Mutex::new(0));
+const CCANVAS_ENV: &str = "CCANVAS_COMPONENT";
 
 impl Client {
     /// Create a new instance of self, will panic if connection fails.
     pub async fn new(config: ClientConfig) -> Self {
-        if !std::env::var("CCANVAS_COMPONENT").is_ok_and(|val| val.as_str() == "1") {
+        if !std::env::var(CCANVAS_ENV).is_ok_and(|val| val.as_str() == "1") {
             println!("Compontent not ran from by ccanvas, please run with CCANVAS_COMPONENT=1 if it is what you want.");
             process::exit(-1);
         }
@@ -75,6 +80,15 @@ impl Client {
             },
         );
 
+        #[cfg(feature = "layout")]
+        let layout = std::env::var(crate::features::layout::LAYOUT_ENV)
+            .is_ok_and(|val| val == "1")
+            .then_some(Arc::new(std::sync::Mutex::new(
+                crate::features::layout::LayoutInfo::new(crate::features::common::Rect::new(
+                    0, 0, 0, 0,
+                )),
+            )));
+
         let (set_socket_sender, set_socket_res) = oneshot::channel();
         req_confirms
             .lock()
@@ -91,6 +105,8 @@ impl Client {
         let listener_handle = {
             let outbound_send = outbound_send.clone();
             let req_confirms = req_confirms.clone();
+            #[cfg(feature = "layout")]
+            let layout = layout.clone();
             tokio::task::spawn_blocking(move || {
                 let outbound_send = outbound_send.clone();
                 for stream in listener.incoming() {
@@ -112,12 +128,35 @@ impl Client {
 
                     match res.content {
                         // events have to be confirmed
+                        #[cfg(not(feature = "layout"))]
                         ResponseContent::Event { content } => {
-                            #[cfg(not(feature = "layout"))]
                             inbound_send
                                 .send(Event::new(content, outbound_send.clone(), res.id))
                                 .unwrap();
-                            #[cfg(feature = "layout")]
+                        }
+                        #[cfg(feature = "layout")]
+                        ResponseContent::Event { mut content } => {
+                            match &content {
+                                crate::bindings::EventVariant::ValueUpdated {
+                                    label, new, ..
+                                } if label == crate::features::layout::LAYOUT_ALLOCATED => {
+                                    if let Ok(new) =
+                                        serde_json::from_value::<crate::features::common::Rect>(
+                                            new.clone(),
+                                        )
+                                    {
+                                        if let Some(layout) = &layout {
+                                            layout.lock().unwrap().rect = new;
+                                            content = crate::bindings::EventVariant::Resize {
+                                                width: new.width,
+                                                height: new.height,
+                                            };
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+
                             inbound_send
                                 .send(Event::new(
                                     content,
@@ -178,7 +217,8 @@ impl Client {
         #[cfg(feature = "layout")]
         SELF_DISCRIM.set(discrim.clone()).unwrap();
 
-        Self {
+        #[allow(clippy::let_and_return)]
+        let client = Self {
             listener_handle: std::sync::Mutex::new(listener_handle).into(),
             request_handle: std::sync::Mutex::new(request_handle).into(),
             inbound_recv: Arc::new(Mutex::new(inbound_recv)),
@@ -187,7 +227,16 @@ impl Client {
             render_requests: std::sync::Mutex::new(Vec::new()).into(),
             req_confirms,
             discrim,
-        }
+            #[cfg(feature = "layout")]
+            layout,
+        };
+
+        #[cfg(feature = "layout")]
+        client
+            .watch_self(crate::features::layout::LAYOUT_ALLOCATED.to_string())
+            .await;
+
+        client
     }
 
     /// Generates a never-before-seen unique request ID.
@@ -339,7 +388,61 @@ impl Client {
                     content: ResponseSuccess::Rendered,
                 };
             }
-            std::mem::take(&mut *render_requests)
+            #[cfg(not(feature = "layout"))]
+            let tasks = std::mem::take(&mut *render_requests);
+
+            #[cfg(feature = "layout")]
+            let tasks = if let Some(layout) = &self.layout {
+                fn map(
+                    rect: crate::features::common::Rect,
+                    mut request: RenderRequest,
+                ) -> Option<RenderRequest> {
+                    match &mut request {
+                        RenderRequest::SetCharColoured { x, y, .. }
+                        | RenderRequest::SetChar { x, y, .. }
+                            if *x >= rect.width && *y >= rect.height =>
+                        {
+                            return None
+                        }
+                        RenderRequest::RenderMultiple { tasks } => {
+                            *tasks = tasks
+                                .iter()
+                                .filter_map(|item| map(rect, item.clone()))
+                                .collect();
+                            if tasks.is_empty() {
+                                return None;
+                            }
+                        }
+                        RenderRequest::SetCharColoured { x, y, .. }
+                        | RenderRequest::SetChar { x, y, .. } => {
+                            *x += rect.x;
+                            *y += rect.y;
+                        }
+                        _ => {}
+                    }
+
+                    Some(request)
+                }
+
+                let rect = layout.lock().unwrap().rect;
+
+                if let Some(RenderRequest::RenderMultiple { tasks }) = map(
+                    rect,
+                    RenderRequest::RenderMultiple {
+                        tasks: std::mem::take(&mut *render_requests),
+                    },
+                ) {
+                    tasks
+                } else {
+                    return ResponseContent::Success {
+                        content: ResponseSuccess::Rendered,
+                    };
+                }
+            } else {
+                std::mem::take(&mut *render_requests)
+            };
+
+            tasks
         };
 
         let req = Request::new(
@@ -542,6 +645,12 @@ impl Client {
             content: ResponseSuccess::Value { value },
         } = res
         {
+            #[cfg(feature = "layout")]
+            if let Some(layout) = &self.layout {
+                let rect = layout.lock().unwrap().rect;
+                return (rect.width, rect.height);
+            }
+
             #[derive(serde::Deserialize)]
             struct TermSize {
                 x: u32,
