@@ -74,7 +74,7 @@ impl Layout {
     pub fn add(
         &mut self,
         at: &[Direction],
-        split: &Direction,
+        split: Direction,
         constraint_1: Constraint,
         constraint_2: Constraint,
         component: Option<Discriminator>,
@@ -283,5 +283,736 @@ impl Layout {
             }
             _ => None,
         }
+    }
+}
+
+impl Layout {
+    /// Add a new blank layout section
+    pub fn add_blank(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(at, split, constraint_1, constraint_2, None, border)
+    }
+
+    /// Add a new component layout section
+    pub fn add_component(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        component: Discriminator,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(
+            at,
+            split,
+            constraint_1,
+            constraint_2,
+            Some(component),
+            border,
+        )
+    }
+
+    /// Add a new layout section below target
+    pub fn add_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new layout section above target
+    pub fn add_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new layout section to the left of target
+    pub fn add_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new layout section to the right of target
+    pub fn add_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+        border: Option<Border>,
+    ) -> bool {
+        self.add(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered layout section
+    pub fn add_bordered(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        component: Option<Discriminator>,
+        border: Border,
+    ) -> bool {
+        self.add(
+            at,
+            split,
+            constraint_1,
+            constraint_2,
+            component,
+            Some(border),
+        )
+    }
+
+    /// Add a new unbordered layout section
+    pub fn add_unbordered(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        component: Option<Discriminator>,
+    ) -> bool {
+        self.add(at, split, constraint_1, constraint_2, component, None)
+    }
+}
+
+impl Layout {
+    /// Add a new blank layout section above target
+    pub fn add_blank_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_blank(at, Direction::Up, constraint_top, onstraint_bottom, border)
+    }
+
+    /// Add a new blank layout section below target
+    pub fn add_blank_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_blank(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            border,
+        )
+    }
+
+    /// Add a new blank layout section to the left of target
+    pub fn add_blank_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_blank(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            border,
+        )
+    }
+
+    /// Add a new blank layout section to the right of target
+    pub fn add_blank_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_blank(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            border,
+        )
+    }
+
+    /// Add a new component layout section above target
+    pub fn add_component_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_component(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new component layout section below target
+    pub fn add_component_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_component(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new component layout section to the left of target
+    pub fn add_component_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_component(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new component layout section to the right of target
+    pub fn add_component_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+        border: Option<Border>,
+    ) -> bool {
+        self.add_component(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered layout section above target
+    pub fn add_bordered_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+        border: Border,
+    ) -> bool {
+        self.add_bordered(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered layout section below target
+    pub fn add_bordered_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+        border: Border,
+    ) -> bool {
+        self.add_bordered(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered layout section to the left of target
+    pub fn add_bordered_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+        border: Border,
+    ) -> bool {
+        self.add_bordered(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered layout section to the right of target
+    pub fn add_bordered_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+        border: Border,
+    ) -> bool {
+        self.add_bordered(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new unbordered layout section above target
+    pub fn add_unbordered_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+    ) -> bool {
+        self.add_unbordered(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+        )
+    }
+
+    /// Add a new unbordered layout section below target
+    pub fn add_unbordered_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Option<Discriminator>,
+    ) -> bool {
+        self.add_unbordered(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+        )
+    }
+
+    /// Add a new unbordered layout section to the left of target
+    pub fn add_unbordered_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+    ) -> bool {
+        self.add_unbordered(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+        )
+    }
+
+    /// Add a new unbordered layout section to the right of target
+    pub fn add_unbordered_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Option<Discriminator>,
+    ) -> bool {
+        self.add_unbordered(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+        )
+    }
+}
+
+impl Layout {
+    /// Add a new bordered blank layout section
+    pub fn add_bordered_blank(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        border: Border,
+    ) -> bool {
+        self.add_blank(at, split, constraint_1, constraint_2, Some(border))
+    }
+
+    /// Add a new unbordered blank layout section
+    pub fn add_unbordered_blank(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+    ) -> bool {
+        self.add_blank(at, split, constraint_1, constraint_2, None)
+    }
+
+    /// Add a new bordered component layout section
+    pub fn add_bordered_component(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        component: Discriminator,
+        border: Border,
+    ) -> bool {
+        self.add_component(
+            at,
+            split,
+            constraint_1,
+            constraint_2,
+            component,
+            Some(border),
+        )
+    }
+
+    /// Add a new unbordered component layout section
+    pub fn add_unbordered_component(
+        &mut self,
+        at: &[Direction],
+        split: Direction,
+        constraint_1: Constraint,
+        constraint_2: Constraint,
+        component: Discriminator,
+    ) -> bool {
+        self.add_component(at, split, constraint_1, constraint_2, component, None)
+    }
+}
+
+impl Layout {
+    /// Add a new bordered blank layout section above target
+    pub fn add_bordered_blank_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_blank(at, Direction::Up, constraint_top, onstraint_bottom, border)
+    }
+
+    /// Add a new bordered blank layout section below target
+    pub fn add_bordered_blank_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_blank(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            border,
+        )
+    }
+
+    /// Add a new bordered blank layout section to the left of target
+    pub fn add_bordered_blank_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_blank(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            border,
+        )
+    }
+
+    /// Add a new bordered blank layout section to the right of target
+    pub fn add_bordered_blank_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_blank(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            border,
+        )
+    }
+
+    /// Add a new bordered component layout section above target
+    pub fn add_bordered_component_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_component(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered component layout section below target
+    pub fn add_bordered_component_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_component(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered component layout section to the left of target
+    pub fn add_bordered_component_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_component(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new bordered component layout section to the right of target
+    pub fn add_bordered_component_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+        border: Border,
+    ) -> bool {
+        self.add_bordered_component(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+            border,
+        )
+    }
+
+    /// Add a new unbordered blank layout section above target
+    pub fn add_unbordered_blank_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+    ) -> bool {
+        self.add_unbordered_blank(at, Direction::Up, constraint_top, onstraint_bottom)
+    }
+
+    /// Add a new unbordered blank layout section below target
+    pub fn add_unbordered_blank_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+    ) -> bool {
+        self.add_unbordered_blank(at, Direction::Down, constraint_top, onstraint_bottom)
+    }
+
+    /// Add a new unbordered blank layout section to the left of target
+    pub fn add_unbordered_blank_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+    ) -> bool {
+        self.add_unbordered_blank(at, Direction::Left, constraint_left, constraint_right)
+    }
+
+    /// Add a new unbordered blank layout section to the right of target
+    pub fn add_unbordered_blank_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+    ) -> bool {
+        self.add_unbordered_blank(at, Direction::Right, constraint_left, constraint_right)
+    }
+
+    /// Add a new unbordered component layout section above target
+    pub fn add_unbordered_component_above(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+    ) -> bool {
+        self.add_unbordered_component(
+            at,
+            Direction::Up,
+            constraint_top,
+            onstraint_bottom,
+            component,
+        )
+    }
+
+    /// Add a new unbordered component layout section below target
+    pub fn add_unbordered_component_below(
+        &mut self,
+        at: &[Direction],
+        constraint_top: Constraint,
+        onstraint_bottom: Constraint,
+        component: Discriminator,
+    ) -> bool {
+        self.add_unbordered_component(
+            at,
+            Direction::Down,
+            constraint_top,
+            onstraint_bottom,
+            component,
+        )
+    }
+
+    /// Add a new unbordered component layout section to the left of target
+    pub fn add_unbordered_component_left(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+    ) -> bool {
+        self.add_unbordered_component(
+            at,
+            Direction::Left,
+            constraint_left,
+            constraint_right,
+            component,
+        )
+    }
+
+    /// Add a new unbordered component layout section to the right of target
+    pub fn add_unbordered_component_right(
+        &mut self,
+        at: &[Direction],
+        constraint_left: Constraint,
+        constraint_right: Constraint,
+        component: Discriminator,
+    ) -> bool {
+        self.add_unbordered_component(
+            at,
+            Direction::Right,
+            constraint_left,
+            constraint_right,
+            component,
+        )
     }
 }

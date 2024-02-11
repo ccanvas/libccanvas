@@ -2,7 +2,7 @@
 
 # ccanvas saver
 
-Bindings to `ccanvas-saver`, display an overlay when the terminal dimensions are too small.
+Bindings to [`ccanvas-saver`](https://github.com/ccanvas/ccanvas-saver), display an overlay when the terminal dimensions are too small.
 
 ## Quickstart
 

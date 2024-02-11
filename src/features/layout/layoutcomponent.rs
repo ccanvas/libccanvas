@@ -94,8 +94,8 @@ impl LayoutComponent {
     pub async fn add_below(
         &self,
         at: Vec<Direction>,
-        constraint_1: Constraint,
-        constraint_2: Constraint,
+        constraint_top: Constraint,
+        constraint_bottom: Constraint,
         component: Option<Discriminator>,
         border: Option<Border>,
     ) -> ResponseContent {
@@ -103,8 +103,8 @@ impl LayoutComponent {
             .layout_add_below(
                 self.discrim.clone(),
                 at,
-                constraint_1,
-                constraint_2,
+                constraint_top,
+                constraint_bottom,
                 component,
                 border,
             )
@@ -115,8 +115,8 @@ impl LayoutComponent {
     pub async fn add_above(
         &self,
         at: Vec<Direction>,
-        constraint_1: Constraint,
-        constraint_2: Constraint,
+        constraint_top: Constraint,
+        constraint_bottom: Constraint,
         component: Option<Discriminator>,
         border: Option<Border>,
     ) -> ResponseContent {
@@ -124,8 +124,8 @@ impl LayoutComponent {
             .layout_add_above(
                 self.discrim.clone(),
                 at,
-                constraint_1,
-                constraint_2,
+                constraint_top,
+                constraint_bottom,
                 component,
                 border,
             )
@@ -136,8 +136,8 @@ impl LayoutComponent {
     pub async fn add_left(
         &self,
         at: Vec<Direction>,
-        constraint_1: Constraint,
-        constraint_2: Constraint,
+        constraint_left: Constraint,
+        constraint_right: Constraint,
         component: Option<Discriminator>,
         border: Option<Border>,
     ) -> ResponseContent {
@@ -145,8 +145,8 @@ impl LayoutComponent {
             .layout_add_left(
                 self.discrim.clone(),
                 at,
-                constraint_1,
-                constraint_2,
+                constraint_left,
+                constraint_right,
                 component,
                 border,
             )
@@ -157,8 +157,8 @@ impl LayoutComponent {
     pub async fn add_right(
         &self,
         at: Vec<Direction>,
-        constraint_1: Constraint,
-        constraint_2: Constraint,
+        constraint_left: Constraint,
+        constraint_right: Constraint,
         component: Option<Discriminator>,
         border: Option<Border>,
     ) -> ResponseContent {
@@ -166,8 +166,8 @@ impl LayoutComponent {
             .layout_add_right(
                 self.discrim.clone(),
                 at,
-                constraint_1,
-                constraint_2,
+                constraint_left,
+                constraint_right,
                 component,
                 border,
             )
