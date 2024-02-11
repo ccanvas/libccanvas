@@ -23,6 +23,12 @@ impl Constraint {
     }
 }
 
+impl From<ConstraintVariant> for Constraint {
+    fn from(value: ConstraintVariant) -> Self {
+        Self::new(value, None, None)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ConstraintVariant {
