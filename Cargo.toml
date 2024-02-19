@@ -23,11 +23,11 @@ jsonc-parser = { version = "0", features = ["serde"], optional = true }
 [features]
 default = []
 betterserde = []
-scroll = []
-saver = ["common"]
-layout = ["common"]
 common = []
 config = ["dep:ccanvas-config-derive", "dep:dirs", "dep:jsonc-parser"]
+layout = ["common"]
+saver = ["common"]
+scroll = []
 
 [profile.release]
 strip = true
@@ -36,4 +36,4 @@ opt-level = 3
 panic = "abort"
 
 [package.metadata.docs.rs]
-features = ["betterserde", "config", "saver"]
+features = ["betterserde", "common", "config", "layout", "saver", "scroll"]
