@@ -99,7 +99,6 @@ impl Client {
             .write_all(serde_json::to_vec(&set_socket).unwrap().as_slice())
             .unwrap();
 
-        #[cfg(feature = "layout")]
         static SELF_DISCRIM: OnceCell<Discriminator> = OnceCell::const_new();
 
         let listener_handle = {
@@ -127,16 +126,49 @@ impl Client {
                     };
 
                     match res.content {
-                        // events have to be confirmed
-                        #[cfg(not(feature = "layout"))]
-                        ResponseContent::Event { content } => {
-                            inbound_send
-                                .send(Event::new(content, outbound_send.clone(), res.id))
-                                .unwrap();
-                        }
-                        #[cfg(feature = "layout")]
+                        #[allow(unused_mut)]
                         ResponseContent::Event { mut content } => {
+                            #[allow(unused_macros)]
+                            macro_rules! done {
+                                () => {
+                                    Event::new(
+                                        content,
+                                        outbound_send.clone(),
+                                        res.id,
+                                        #[cfg(feature = "layout")]
+                                        SELF_DISCRIM
+                                            .get()
+                                            .map(Discriminator::clone)
+                                            .unwrap_or_else(Discriminator::master),
+                                        #[cfg(feature = "layout")]
+                                        layout.is_some(),
+                                    )
+                                    .done(true);
+                                };
+                            }
+
                             match &content {
+                                #[cfg(feature = "scroll")]
+                                crate::bindings::EventVariant::Message { tag, content, .. }
+                                    if tag == crate::features::scroll::SCROLL_RES =>
+                                {
+                                    if let Ok(content) =
+                                        serde_json::from_value::<
+                                            crate::features::scroll::ScrollResponse,
+                                        >(content.clone())
+                                    {
+                                        crate::features::scroll::SCROLL_CONFIRMS
+                                            .get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+                                            .lock()
+                                            .unwrap()
+                                            .remove(&content.id)
+                                            .map(|sender| sender.send(content.content));
+                                    } else {
+                                        done!();
+                                        continue;
+                                    }
+                                }
+                                #[cfg(feature = "layout")]
                                 crate::bindings::EventVariant::ValueUpdated {
                                     label, new, ..
                                 } if label == crate::features::layout::LAYOUT_ALLOCATED => {
@@ -152,12 +184,17 @@ impl Client {
                                                 height: new.height,
                                             };
                                         }
+                                    } else {
+                                        done!();
+                                        continue;
                                     }
                                 }
+                                #[cfg(feature = "layout")]
                                 crate::bindings::EventVariant::Resize { .. }
                                     if layout.is_some() =>
                                 {
-                                    continue
+                                    done!();
+                                    continue;
                                 }
                                 _ => {}
                             }
@@ -167,10 +204,13 @@ impl Client {
                                     content,
                                     outbound_send.clone(),
                                     res.id,
+                                    #[cfg(feature = "layout")]
                                     SELF_DISCRIM
                                         .get()
                                         .map(Discriminator::clone)
                                         .unwrap_or_else(Discriminator::master),
+                                    #[cfg(feature = "layout")]
+                                    layout.is_some(),
                                 ))
                                 .unwrap();
                         }
@@ -219,7 +259,6 @@ impl Client {
             panic!("no")
         };
 
-        #[cfg(feature = "layout")]
         SELF_DISCRIM.set(discrim.clone()).unwrap();
 
         #[allow(clippy::let_and_return)]
@@ -239,6 +278,12 @@ impl Client {
         #[cfg(feature = "layout")]
         client
             .watch_self(crate::features::layout::LAYOUT_ALLOCATED.to_string())
+            .await;
+        #[cfg(feature = "scroll")]
+        client
+            .subscribe(Subscription::specific_message_tag(
+                crate::features::scroll::SCROLL_RES.to_string(),
+            ))
             .await;
 
         client
@@ -412,10 +457,30 @@ impl Client {
 
     /// Add a clear all task to render queue.
     pub fn clear_all(&self) {
+        #[cfg(feature = "layout")]
+        if let Some(layout) = &self.layout {
+            let rect = layout.lock().unwrap().rect;
+            self.clear_area(rect.x, rect.y, rect.width, rect.height);
+            return;
+        }
+
         self.render_requests
             .lock()
             .unwrap()
             .push(RenderRequest::ClearAll)
+    }
+
+    /// Add a clear area task to render queue.
+    pub fn clear_area(&self, x: u32, y: u32, width: u32, height: u32) {
+        self.render_requests
+            .lock()
+            .unwrap()
+            .push(RenderRequest::ClearArea {
+                x,
+                y,
+                width,
+                height,
+            })
     }
 
     /// Flush and complete all tasks in render queue.
@@ -454,6 +519,27 @@ impl Client {
                         }
                         RenderRequest::SetCharColoured { x, y, .. }
                         | RenderRequest::SetChar { x, y, .. } => {
+                            *x += rect.x;
+                            *y += rect.y;
+                        }
+                        RenderRequest::ClearArea {
+                            x,
+                            y,
+                            width,
+                            height,
+                        } => {
+                            if *x > rect.width || *y > rect.height {
+                                return None;
+                            }
+
+                            if *width + *x > rect.width {
+                                *width = rect.width - *x;
+                            }
+
+                            if *height + *y > rect.height {
+                                *height = rect.height - *y;
+                            }
+
                             *x += rect.x;
                             *y += rect.y;
                         }

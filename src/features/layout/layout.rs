@@ -228,6 +228,7 @@ impl Layout {
         }
     }
 
+    /// Set a sublayout with a layout
     pub fn set(&mut self, at: &[Direction], state: Layout) -> bool {
         if at.is_empty() {
             *self = state;
@@ -257,6 +258,7 @@ impl Layout {
         }
     }
 
+    /// Get a sublayout
     pub fn get(&self, at: &[Direction]) -> Option<&Self> {
         if at.is_empty() {
             return Some(self);

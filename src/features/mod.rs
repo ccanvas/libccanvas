@@ -8,3 +8,5 @@ pub mod config;
 pub mod layout;
 #[cfg(feature = "saver")]
 pub mod saver;
+#[cfg(feature = "scroll")]
+pub mod scroll;

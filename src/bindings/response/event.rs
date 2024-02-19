@@ -25,12 +25,17 @@ impl Event {
         sender: UnboundedSender<Request>,
         confirm: u32,
         #[cfg(feature = "layout")] self_discrim: Discriminator,
+        #[cfg(feature = "layout")] is_layout: bool,
     ) -> Self {
         Self {
             content,
             confirm: Mutex::new(Some((confirm, sender.clone()))),
             #[cfg(feature = "layout")]
-            layout_confirm: Mutex::new(Some((sender, self_discrim))),
+            layout_confirm: Mutex::new(if is_layout {
+                Some((sender, self_discrim))
+            } else {
+                None
+            }),
         }
     }
 

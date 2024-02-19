@@ -179,6 +179,15 @@ pub enum RenderRequest {
     #[serde(rename = "clear all")]
     ClearAll,
 
+    /// Clear terminal content within a specified area
+    #[serde(rename = "clear area")]
+    ClearArea {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
+
     /// Render multiple items at the same time - guaranteed to be rendered at the same time, and
     /// socket performance is significantly better than sending individual requests.
     #[serde(rename = "render multiple")]

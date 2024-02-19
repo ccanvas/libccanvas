@@ -2,9 +2,12 @@ use crate::bindings::Colour;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
+/// Border of a single layout item
 pub struct Border {
+    /// Colour of the border
     pub colour: Colour,
     #[serde(flatten)]
+    /// Style of the border
     pub r#type: BorderType,
 }
 
