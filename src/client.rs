@@ -1,18 +1,22 @@
-use std::{collections::HashMap, fs, io, path::PathBuf};
+use std::{collections::HashMap, io, path::PathBuf};
 
 use mio::{
     net::{UnixListener, UnixStream},
     Token,
 };
 
-use crate::{clientbuilder::ClientBuilder, pass::{BytePass, OnDropPass}};
+use crate::{
+    clientbuilder::ClientBuilder,
+    pass::{ClientPass, PacketPass},
+};
 
 pub struct Client {
     listener: UnixListener,
     listener_path: PathBuf,
     incoming_streams: HashMap<Token, UnixStream>,
-    byte_recieve: Vec<BytePass>,
-    drop: Vec<OnDropPass>
+    req_pass: Vec<PacketPass>,
+    recv_pass: Vec<PacketPass>,
+    drop_pass: Vec<ClientPass>,
 }
 
 impl Client {
@@ -29,8 +33,9 @@ impl TryFrom<ClientBuilder> for Client {
             listener,
             listener_path: builder.get_config().listening().clone(),
             incoming_streams: HashMap::from([(Token(0), ccanvas)]),
-            byte_recieve: builder.get_byte_recieve(),
-            drop: builder.get_drop()
+            req_pass: builder.get_req(),
+            recv_pass: builder.get_recv(),
+            drop_pass: builder.get_drop(),
         })
     }
 
@@ -39,8 +44,8 @@ impl TryFrom<ClientBuilder> for Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        for pass in self.drop.iter() {
-            pass(&self)
+        for pass in self.drop_pass.iter() {
+            pass(self)
         }
     }
 }

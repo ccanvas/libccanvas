@@ -1,25 +1,26 @@
-use std::{collections::BTreeSet, error::Error, io};
+use std::{collections::BTreeSet, io};
 
 use crate::{
-    client::Client, clientconfig::ClientConfig, defaults, pass::{BytePass, OnDropPass, PacketReqPass, PacketResPass}
+    client::Client,
+    clientconfig::ClientConfig,
+    defaults,
+    pass::{ClientPass, PacketPass},
 };
 
 pub struct ClientBuilder {
     config: ClientConfig,
-    recieved_bytes: BTreeSet<(Option<usize>, BytePass)>,
-    packet_req_pass: BTreeSet<(Option<usize>, PacketReqPass)>,
-    packet_res_pass: BTreeSet<(Option<usize>, PacketResPass)>,
-    drop_pass: BTreeSet<(Option<usize>, OnDropPass)>
+    req_pass: BTreeSet<(Option<usize>, PacketPass)>,
+    recv_pass: BTreeSet<(Option<usize>, PacketPass)>,
+    drop_pass: BTreeSet<(Option<usize>, ClientPass)>,
 }
 
 impl ClientBuilder {
     pub fn new(config: ClientConfig) -> Self {
         Self {
             config,
-            recieved_bytes: BTreeSet::new(),
-            packet_req_pass: BTreeSet::new(),
-            packet_res_pass: BTreeSet::new(),
-            drop_pass: BTreeSet::new()
+            req_pass: BTreeSet::new(),
+            recv_pass: BTreeSet::new(),
+            drop_pass: BTreeSet::new(),
         }
     }
 
@@ -27,17 +28,18 @@ impl ClientBuilder {
         self.on_drop(None, defaults::on_drop)
     }
 
-    pub fn on_drop(mut self, priority: Option<usize>, map: OnDropPass) -> Self {
-        self.drop_pass.insert((priority, map));
+    pub fn on_req(mut self, priority: Option<usize>, map: PacketPass) -> Self {
+        self.req_pass.insert((priority, map));
         self
     }
 
-    pub fn on_byte_recieve(
-        mut self,
-        priority: Option<usize>,
-        map: BytePass,
-    ) -> Self {
-        self.recieved_bytes.insert((priority, map));
+    pub fn on_recv(mut self, priority: Option<usize>, map: PacketPass) -> Self {
+        self.recv_pass.insert((priority, map));
+        self
+    }
+
+    pub fn on_drop(mut self, priority: Option<usize>, map: ClientPass) -> Self {
+        self.drop_pass.insert((priority, map));
         self
     }
 
@@ -45,11 +47,15 @@ impl ClientBuilder {
         self.try_into()
     }
 
-    pub fn get_byte_recieve(&self) -> Vec<BytePass> {
-        self.recieved_bytes.iter().map(|item| item.1).collect()
+    pub fn get_req(&self) -> Vec<PacketPass> {
+        self.req_pass.iter().map(|item| item.1).collect()
     }
 
-    pub fn get_drop(&self) -> Vec<OnDropPass> {
+    pub fn get_recv(&self) -> Vec<PacketPass> {
+        self.recv_pass.iter().map(|item| item.1).collect()
+    }
+
+    pub fn get_drop(&self) -> Vec<ClientPass> {
         self.drop_pass.iter().map(|item| item.1).collect()
     }
 

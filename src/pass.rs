@@ -1,8 +1,6 @@
-use ccanvas_bindings::packets::{PacketReq, PacketRes};
+use ccanvas_bindings::packets::Packet;
 
 use crate::client::Client;
 
-pub type BytePass = fn(Vec<u8>) -> Option<Vec<u8>>;
-pub type PacketResPass = fn(PacketRes) -> Option<PacketRes>;
-pub type PacketReqPass = fn(PacketReq) -> Option<PacketReq>;
-pub type OnDropPass = fn(&Client);
+pub type PacketPass = fn(Packet) -> Option<Packet>;
+pub type ClientPass = fn(&Client);

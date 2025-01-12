@@ -17,5 +17,5 @@ mod client;
 pub use client::Client;
 mod clientbuilder;
 mod clientconfig;
-mod pass;
 mod defaults;
+mod pass;

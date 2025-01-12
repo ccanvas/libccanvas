@@ -3,6 +3,10 @@ name = "libccanvas"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-ccanvas-bindings = { path = "../ccanvas-bindings" }
-mio = { version = "1.0", features = ["os-poll", "net"]}
+[dependencies.mio]
+version = "1.0"
+features = ["os-poll", "net"]
+
+[dependencies.ccanvas-bindings]
+git = "https://github.com/ccanvas/rust-bindings"
+rev = "d7151de"
