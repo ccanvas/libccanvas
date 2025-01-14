@@ -5,8 +5,14 @@ edition = "2021"
 
 [dependencies.mio]
 version = "1.0"
+default-features = false
 features = ["os-poll", "net"]
 
 [dependencies.ccanvas-bindings]
+# path = "../ccanvas-bindings"
 git = "https://github.com/ccanvas/rust-bindings"
-rev = "d7151de"
+rev = "0548e40"
+features = [
+    "connection",
+    "debug"
+]
